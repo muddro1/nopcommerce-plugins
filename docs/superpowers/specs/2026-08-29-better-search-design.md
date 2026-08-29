@@ -112,25 +112,74 @@ matching IDs and pages in memory.
 
 Short terms get no fuzziness because at three characters almost everything is
 within one edit of everything else, which is how fuzzy search starts returning
-noise. Exact matches are boosted so they always outrank fuzzy ones: a customer
-typing a precise SKU must see that product first, never a near-miss.
+noise. Exact matches are boosted so they always outrank fuzzy ones.
+
+### Identifiers are not fuzzy-matched until everything else has failed
+
+Typo tolerance is dangerous on part numbers: `1234` and `1284` are one edit
+apart, so a fuzzy identifier match can confidently return a different real
+product. Someone who sees no results searches again; someone who sees the wrong
+part may order it.
+
+The search therefore runs in two passes:
+
+1. **Strict pass.** Fuzzy matching on name, descriptions and tags as above, but
+   SKU, part number and GTIN are matched exactly, by segment and by substring
+   only — never fuzzily. Almost every search ends here.
+2. **Approximate pass**, run only when the strict pass returns nothing. The same
+   query is retried with fuzziness allowed on identifiers too, and the results
+   are marked as approximate so the page can say so.
+
+The customer is never shown a near-miss part number while an exact answer
+exists, and never shown one silently.
+
+### SKU matching: substring, not prefix
+
+The store's SKUs follow a fixed pattern — `fmsa-xx-xxxx` — where the leading
+segment is constant across the whole catalogue and staff search by the varying
+parts. Prefix matching is therefore useless here: every SKU shares the prefix,
+and nobody searches by it.
+
+Each SKU is indexed three ways:
+
+| Indexed as | `fmsa-ab-1234` becomes | Boost |
+| --- | --- | --- |
+| Raw, lowercased | `fmsa-ab-1234` | highest |
+| Segments, split on non-alphanumerics, plus the normalised whole | `fmsa`, `ab`, `1234`, `fmsaab1234` | high |
+| N-grams over the normalised form (2 to 10 characters) | `123`, `234`, `ab12`, `fmsaab`, … | moderate |
+
+This gives substring matching anywhere in the SKU:
+
+- `fmsa-ab-1234` — exact hit, top of the results
+- `1234` — segment hit
+- `ab-1234` — two segment hits, so it outranks either alone
+- `ab1234` — matches the normalised whole
+- `234` — n-gram hit, ranked below a whole-segment match
+
+**The constant prefix needs no special handling.** Because `fmsa` appears in
+every SKU, Lucene's inverse-document-frequency weighting reduces its
+contribution to near zero on its own. Searching it returns everything, ordered
+by whatever else was typed.
+
+The same treatment is applied to manufacturer part number. GTIN stays exact
+only, since it is an external identifier that is either right or wrong.
 
 ### Indexed fields and weights
 
 | Field | Weight | Matching |
 | --- | --- | --- |
-| SKU | highest | exact, prefix, and normalised (punctuation and case stripped) |
-| Name | high | per-term, fuzzy, stemmed |
-| Manufacturer part number | high | exact, prefix, normalised |
+| SKU | highest | exact, segment and substring, as above |
+| Manufacturer part number | high | exact, segment and substring |
 | GTIN | high | exact only |
+| Name | high | per-term, fuzzy, stemmed |
 | Short description | medium | per-term, fuzzy, stemmed |
 | Full description | low | per-term, fuzzy, stemmed |
 | Product tags | medium | per-term |
 | Category and manufacturer names | low | per-term |
 
-SKU normalisation is what makes `abc123` find `ABC-123`: both sides are
-lowercased and stripped of non-alphanumerics before comparison, with the raw
-form indexed as well so exact matches still score highest.
+A SKU or part-number hit always outranks a name or description hit for the same
+term, so someone typing a part number gets the part, not a product that happens
+to mention the number in its copy.
 
 ### Unpublished products are indexed
 
@@ -226,6 +275,13 @@ overriding `ICatalogModelFactory`, which would otherwise be needed because
 `SearchProductsAsync` returns `IPagedList<Product>` and has nowhere to carry a
 suggestion.
 
+The same widget carries the **approximate-results notice** required by the
+two-pass identifier rule. When the strict pass finds nothing and the
+approximate pass supplies the results, the widget says so — for example
+"No exact match for fmsa-ab-1284. Showing closest matches." Without that notice
+the two-pass design would quietly present a different part number as though it
+were the one asked for, which is the outcome the rule exists to prevent.
+
 The suggestion is computed during the search itself, not by re-querying. When
 the override runs it records the query and the result count in
 `HttpContext.Items`; the widget reads that request-scoped value and renders only
@@ -253,6 +309,25 @@ Deliberately excluded. Synonyms need an admin CRUD screen and catalogue-specific
 curation, and their value is unknown until the core is running against real
 traffic. The search-term log is what tells us whether they are needed.
 
+## Store prerequisite: minimum search term length
+
+`CatalogSettings.ProductSearchTermMinimumLength` defaults to **3** and is
+enforced in `CatalogModelFactory` (around line 1689) and `CatalogController`
+(line 333) — both **before** this plugin's override is reached. A search shorter
+than the minimum never gets as far as the index.
+
+The store's SKU pattern `fmsa-xx-xxxx` has a two-character middle segment, and
+staff search by it. With the default setting, searching `ab` is rejected with a
+"minimum length" message no matter what this plugin does.
+
+**Set it to 2** (Configuration → Settings → Catalog settings). This is a store
+setting, not something the plugin can override.
+
+To stop this being rediscovered painfully, the plugin's configuration page
+reads the current value and displays a warning when it is greater than 2,
+explaining that short SKU segment searches will be blocked before the plugin
+sees them.
+
 ## Edge cases
 
 | Case | Behaviour |
@@ -266,7 +341,11 @@ traffic. The search-term log is what tells us whether they are needed.
 | Admin search with `showHidden: true` | unpublished products found, because the index holds them |
 | Explicit sort by price or name | honoured; relevance decides membership only |
 | Query matches more products than the page size | all IDs fetched, paged in memory |
-| Query matches nothing | "did you mean" suggestion, and the miss is logged |
+| Strict pass finds nothing, approximate pass finds something | results shown, clearly labelled approximate |
+| Query matches nothing in either pass | "did you mean" suggestion, and the miss is logged |
+| Search term shorter than the store minimum | rejected by nopCommerce before the plugin runs — see the prerequisite above |
+| Search for the constant SKU prefix `fmsa` | matches everything; IDF weighting makes it contribute almost nothing to ranking |
+| Identifier search where an exact match exists | never fuzzy-matched; the exact product wins |
 | Deleted product | removed from the index by the delete event; also gone after any rebuild |
 | Multi-store | store filtering is applied by nopCommerce's query, not the index |
 
@@ -274,9 +353,14 @@ traffic. The search-term log is what tells us whether they are needed.
 
 **Unit tests, no nopCommerce required** — the bulk of the value:
 
-- `SearchQueryBuilder`: fuzziness by term length, exact-match boosting, SKU
-  normalisation (`abc123` → `ABC-123`), multi-term queries, punctuation, empty
-  and whitespace input.
+- `SearchQueryBuilder`: fuzziness by term length, exact-match boosting,
+  multi-term queries, punctuation, empty and whitespace input, and that
+  identifier fields carry no fuzziness on the strict pass but do on the
+  approximate pass.
+- SKU handling specifically, using the store's real pattern: `fmsa-ab-1234`
+  found by `fmsa-ab-1234`, `1234`, `ab-1234`, `ab1234` and `234`; `ab-1234`
+  ranking above `1234` alone; `1284` never returning the `1234` product on the
+  strict pass; and `fmsa` matching everything without dominating the ranking.
 - `ProductDocumentBuilder`: every indexed field present, weights applied,
   null-safe on missing descriptions or SKUs.
 - Drift check: identical indexes compare equal, a missing document is detected.
