@@ -83,18 +83,58 @@ Where the fee appears
 The fee is charged through nopCommerce's own payment method additional fee
 channel, so it shows on the cart page, checkout, order confirmation, order
 details and PDF invoice under the existing "Payment method fee" label - the
-same label a payment method's own surcharge would use. That label is driven
-by two separate locale resources, and both would need renaming to relabel it
-store-wide (Admin area > Configuration > Languages):
+same label a payment method's own surcharge would use.
 
-  - "ShoppingCart.Totals.PaymentMethodAdditionalFee" - used on the cart page
-    and throughout checkout (Nop.Web's OrderTotals view component).
-  - "Order.PaymentMethodAdditionalFee" - used on the order details page.
 
-If either resource is renamed, the handling fee appears under the renamed
-label wherever that resource is used. If the chosen payment method also
-charges its own fee, the two amounts are combined into a single total; the
-line does not distinguish which part came from which source.
+Renaming the label (for example to "Small Order Handling Charge")
+-----------------------------------------------------------------
+The label is a core nopCommerce locale resource, not a plugin setting, so it
+is changed in the admin area rather than on the plugin's configuration page.
+There is no per-line label override: the two views that display the fee call
+@T("...") on a fixed resource name.
+
+Admin area > Configuration > Languages > (your language) > String resources,
+then search for "PaymentMethodAdditionalFee".
+
+FOUR resources are customer-facing. Rename all four, or the fee will be
+labelled inconsistently depending on where the customer sees it:
+
+  ShoppingCart.Totals.PaymentMethodAdditionalFee
+      "Payment method additional fee"
+      Cart page and all of checkout.
+
+  Order.PaymentMethodAdditionalFee
+      "Payment method additional fee"
+      Order details page, both the customer's view and the admin's.
+
+  PDFInvoice.PaymentMethodAdditionalFee
+      "Payment Method Additional Fee:"
+      PDF invoices. NOTE the trailing colon is part of the value here -
+      keep it, or invoices lose the colon.
+
+  Messages.Order.PaymentMethodAdditionalFee
+      "Payment method additional fee:"
+      Order emails. NOTE the trailing colon is part of the value here too.
+
+Two more are admin-only. Rename them as well if you want staff to see
+consistent wording on the order screens:
+
+  Admin.Orders.Fields.PaymentMethodAdditionalFee
+  Admin.Orders.Fields.Edit.PaymentMethodAdditionalFee
+
+Do NOT rename the "Admin.Configuration.Settings.Tax.*" resources. Those
+describe the nopCommerce tax setting itself, which genuinely is the payment
+method fee setting, and renaming them makes the tax settings page confusing.
+
+If the store runs more than one language, repeat this for each language -
+locale resources are per language, not per store.
+
+Because these are shared core resources, the rename applies to every use of
+that line. If a payment method also charges its own fee, its fee will display
+under the new label as well, and the two amounts are combined into a single
+total; the line does not distinguish which part came from which source. If no
+payment method charges a fee, that line belongs entirely to the handling fee
+and the rename is exact.
 
 Because the fee rides this channel, its taxability is controlled from
 Configuration > Tax settings, not from this plugin: the "Payment method

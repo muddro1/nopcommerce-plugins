@@ -54,13 +54,39 @@ Save.
 > `Plugins.Misc.HandlingFee.Fields.FeeAmount`. Save, reload, and confirm the four
 > values persisted.
 
-### 1.3 Turn fee tax off for Part 2
+### 1.3 Rename the label (optional, but do it before testing)
+
+The fee displays under nopCommerce's shared "Payment method additional fee"
+label. To show it as **Small Order Handling Charge**, go to **Configuration →
+Languages → (your language) → String resources**, search
+`PaymentMethodAdditionalFee`, and rename these four customer-facing resources:
+
+| Resource | Current value | Note |
+| --- | --- | --- |
+| `ShoppingCart.Totals.PaymentMethodAdditionalFee` | Payment method additional fee | cart and checkout |
+| `Order.PaymentMethodAdditionalFee` | Payment method additional fee | order details |
+| `PDFInvoice.PaymentMethodAdditionalFee` | Payment Method Additional Fee**:** | **keep the trailing colon** |
+| `Messages.Order.PaymentMethodAdditionalFee` | Payment method additional fee**:** | **keep the trailing colon** |
+
+Optionally also rename `Admin.Orders.Fields.PaymentMethodAdditionalFee` and
+`Admin.Orders.Fields.Edit.PaymentMethodAdditionalFee` so staff see consistent
+wording. Leave the `Admin.Configuration.Settings.Tax.*` ones alone — they
+describe the tax setting itself.
+
+Repeat per language if the store runs more than one.
+
+Doing this before you test matters for two reasons: the rest of this script
+refers to the line by its new name, and checking all four places is itself part
+of the test — a missed resource shows up as an invoice or email still saying
+"Payment method additional fee".
+
+### 1.4 Turn fee tax off for Part 2
 
 **Configuration → Settings → Tax settings** → untick **"Payment method additional
 fee is taxable"**. Part 2's expected figures assume this is off. Part 4 turns it
 back on.
 
-### 1.4 Confirm the settings actually stored
+### 1.5 Confirm the settings actually stored
 
 Run against the staging database:
 
@@ -85,7 +111,7 @@ taxsettings.paymentmethodadditionalfeeistaxable    False
 If `handlingfeesettings.*` rows are missing entirely, the plugin was not
 installed properly — stop and fix that first.
 
-### 1.5 Products you will need
+### 1.6 Products you will need
 
 - **P-PHYS-30** — a shippable product priced 30.00
 - **P-PHYS-100** — a shippable product priced 100.00
@@ -131,7 +157,7 @@ Each case isolates one clause of the rule:
 
 ### 2.1 Before placing each order — check the cart page
 
-Case 1 should show a **Payment method fee** line of 4.95 on the shopping cart
+Case 1 should show a **Small Order Handling Charge** line of 4.95 on the shopping cart
 page, *before* any payment method has been selected. That line existing at that
 point is the entire reason for one of the two service overrides — if it only
 appears later in checkout, something is wrong.
