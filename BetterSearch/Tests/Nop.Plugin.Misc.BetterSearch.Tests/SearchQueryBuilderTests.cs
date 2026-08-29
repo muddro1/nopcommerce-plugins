@@ -134,5 +134,45 @@ namespace Nop.Plugin.Misc.BetterSearch.Tests
         {
             _index.Search("   ").Should().BeEmpty();
         }
+
+        [Test]
+        public void Finds_a_product_when_an_identifier_is_combined_with_a_name_word()
+        {
+            _index.Search("1234 flange").Should().Contain(TargetProduct);
+        }
+
+        [Test]
+        public void A_mixed_query_with_an_unindexed_word_still_finds_the_part()
+        {
+            //"gasket" appears nowhere in the fixture; it must not block the "1234" match
+            var results = _index.Search("1234 gasket");
+
+            results.Should().NotBeEmpty();
+            results.Should().Contain(TargetProduct);
+        }
+
+        [Test]
+        public void A_mixed_query_does_not_return_a_near_miss_part()
+        {
+            //1284 is SimilarProduct's own segment, not TargetProduct's - "gasket" is an
+            //unindexed companion word (as in the test above) so the only signal in play is
+            //the identifier itself. ("1284 flange" cannot be used here: TargetProduct's own
+            //Name is "Flange assembly", so "flange" alone legitimately - and independently of
+            //any identifier match - matches TargetProduct via free text, which is exactly the
+            //behaviour Finds_a_product_when_an_identifier_is_combined_with_a_name_word above
+            //and the pre-existing Text_search_tolerates_a_typo test both depend on. Reusing
+            //"flange" here would make this test contradict those two.)
+            var results = _index.Search("1284 gasket");
+
+            results.Should().NotContain(TargetProduct);
+            results.Should().Contain(SimilarProduct);
+        }
+
+        [Test]
+        public void Multi_word_text_search_still_works()
+        {
+            //guards against the word-splitting change breaking pure text queries
+            _index.Search("assembly flange").Should().Contain(TargetProduct);
+        }
     }
 }

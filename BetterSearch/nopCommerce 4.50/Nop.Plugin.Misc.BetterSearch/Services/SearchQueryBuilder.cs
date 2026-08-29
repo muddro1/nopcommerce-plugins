@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Lucene.Net.Index;
@@ -43,7 +44,8 @@ namespace Nop.Plugin.Misc.BetterSearch.Services
             AddTerm(outer, BetterSearchDefaults.FIELD_MPN_RAW, raw, BOOST_IDENTIFIER_RAW);
             AddTerm(outer, BetterSearchDefaults.FIELD_GTIN, queryText.Trim(), BOOST_GTIN);
 
-            //the whole query with separators stripped, so "ab1234" matches "ab-1234"
+            //the whole query with all separators (including whitespace) stripped, so
+            //"ab1234" matches "ab-1234"
             var normalisedWhole = SkuNormaliser.Normalise(raw);
             if (normalisedWhole.Length >= ProductDocumentBuilder.NGRAM_MIN)
             {
@@ -51,18 +53,28 @@ namespace Nop.Plugin.Misc.BetterSearch.Services
                 AddTerm(outer, BetterSearchDefaults.FIELD_MPN_NGRAM, normalisedWhole, BOOST_IDENTIFIER_SEGMENT);
             }
 
-            //Every segment the caller typed must be present in a product's identifier for the
-            //identifier match to count - matching only some of several segments is not enough.
-            //Two part numbers that share a prefix and differ in only their last segment are
-            //different parts, and scoring alone cannot exclude a wrong one from a plain
-            //SHOULD/OR query: a lower boost still leaves it in the result set. Requiring every
-            //segment (via an inner MUST group) is what keeps a partial match out entirely.
-            AddAllSegmentsMatch(outer, BetterSearchDefaults.FIELD_SKU_SEGMENT, terms, BOOST_IDENTIFIER_SEGMENT);
-            AddAllSegmentsMatch(outer, BetterSearchDefaults.FIELD_MPN_SEGMENT, terms, BOOST_IDENTIFIER_SEGMENT);
+            //Identifier matching operates per WORD (whitespace-delimited), not across the whole
+            //query: within a single word every sub-segment must match (an inner all-MUST
+            //group), but the words themselves combine with SHOULD. That is what lets
+            //"1234 gasket" find the part on its "1234" word alone even though "gasket" is not
+            //indexed anywhere, while "fmsa-ab-1284" - one word - still requires every one of
+            //its three segments and so cannot match a product that is missing any of them.
+            //Splitting all the query's segments into one flat MUST group (as an earlier version
+            //of this method did) broke the first case: a word from free text that happens not
+            //to be a SKU segment made the whole identifier match impossible.
+            foreach (var word in raw.Split((char[])null, StringSplitOptions.RemoveEmptyEntries))
+            {
+                var subSegments = SkuNormaliser.Segments(word);
+                if (!subSegments.Any())
+                    continue;
 
-            var ngramTerms = terms.Where(term => term.Length >= ProductDocumentBuilder.NGRAM_MIN).ToList();
-            AddAllSegmentsMatch(outer, BetterSearchDefaults.FIELD_SKU_NGRAM, ngramTerms, BOOST_IDENTIFIER_NGRAM);
-            AddAllSegmentsMatch(outer, BetterSearchDefaults.FIELD_MPN_NGRAM, ngramTerms, BOOST_IDENTIFIER_NGRAM);
+                AddAllSegmentsMatch(outer, BetterSearchDefaults.FIELD_SKU_SEGMENT, subSegments, BOOST_IDENTIFIER_SEGMENT);
+                AddAllSegmentsMatch(outer, BetterSearchDefaults.FIELD_MPN_SEGMENT, subSegments, BOOST_IDENTIFIER_SEGMENT);
+
+                var ngramSegments = subSegments.Where(segment => segment.Length >= ProductDocumentBuilder.NGRAM_MIN).ToList();
+                AddAllSegmentsMatch(outer, BetterSearchDefaults.FIELD_SKU_NGRAM, ngramSegments, BOOST_IDENTIFIER_NGRAM);
+                AddAllSegmentsMatch(outer, BetterSearchDefaults.FIELD_MPN_NGRAM, ngramSegments, BOOST_IDENTIFIER_NGRAM);
+            }
 
             foreach (var term in terms)
             {
