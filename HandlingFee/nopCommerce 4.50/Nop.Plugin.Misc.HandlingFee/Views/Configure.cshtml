@@ -4,6 +4,7 @@
     Layout = "_ConfigurePlugin";
 }
 
+@await Component.InvokeAsync("StoreScopeConfiguration")
 <form asp-controller="MiscHandlingFee" asp-action="Configure" method="post">
     <div class="cards-group">
         <div class="card card-default">
