@@ -181,6 +181,29 @@ A SKU or part-number hit always outranks a name or description hit for the same
 term, so someone typing a part number gets the part, not a product that happens
 to mention the number in its copy.
 
+### Case is never significant
+
+All matching is case-insensitive, on every field. `FMSA-AB-1234`,
+`fmsa-ab-1234` and `Fmsa-Ab-1234` are the same search, and all three find the
+product however its SKU is capitalised in the catalogue.
+
+This is achieved by lowercasing on **both** sides — every field as it is
+indexed, and every term as it is queried.
+
+**Implementation trap worth stating explicitly.** The obvious way to index a
+SKU is with a keyword analyzer, so the whole SKU stays a single token rather
+than being chopped at the hyphens. A keyword analyzer performs no lowercasing
+of its own. Used naively it produces search that is case-insensitive on names
+and descriptions — where the standard analyzer lowercases for you — but
+case-sensitive on SKUs, which is precisely the field where a user is most
+likely to type capitals. The same failure occurs if the index side lowercases
+and the query side does not, in which case matches fail silently rather than
+erroring.
+
+Every custom analyzer in this plugin therefore includes an explicit lowercase
+filter, and the test suite asserts case-insensitivity on the SKU field
+specifically, not only on names.
+
 ### Unpublished products are indexed
 
 Admin product search passes `showHidden: true` and must find unpublished
@@ -220,6 +243,13 @@ If the index directory is missing, locked, corrupt, or a query throws, the
 plugin logs a warning and delegates to `base.SearchProductsAsync`. Search
 quality drops to stock; search never breaks. This also covers the window
 between installing the plugin and the first index build completing.
+
+One consequence: while the fallback is in use, case sensitivity is whatever the
+database collation does, because stock search compares `p.Sku == keywords` in
+SQL. Standard SQL Server collations are case-insensitive (`..._CI_...`), so in
+practice this changes nothing, but it is the database rather than the plugin
+deciding. `SELECT DATABASEPROPERTYEX(DB_NAME(), 'Collation')` shows which is in
+force — `_CI_` for case-insensitive, `_CS_` for case-sensitive.
 
 ## Architecture
 
@@ -361,6 +391,8 @@ sees them.
   found by `fmsa-ab-1234`, `1234`, `ab-1234`, `ab1234` and `234`; `ab-1234`
   ranking above `1234` alone; `1284` never returning the `1234` product on the
   strict pass; and `fmsa` matching everything without dominating the ranking.
+- Case-insensitivity asserted on the SKU field specifically: `FMSA-AB-1234`,
+  `fmsa-ab-1234` and `AB-1234` all match a product stored as `fmsa-ab-1234`.
 - `ProductDocumentBuilder`: every indexed field present, weights applied,
   null-safe on missing descriptions or SKUs.
 - Drift check: identical indexes compare equal, a missing document is detected.
