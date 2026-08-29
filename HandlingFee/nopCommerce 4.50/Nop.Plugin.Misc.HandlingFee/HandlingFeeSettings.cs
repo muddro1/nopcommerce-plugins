@@ -23,8 +23,10 @@ namespace Nop.Plugin.Misc.HandlingFee
         public decimal FeeAmount { get; set; }
 
         /// <summary>
-        /// Gets or sets a value indicating whether a shipping charge suppresses the fee
+        /// Gets or sets a value indicating whether a shipping charge suppresses the fee.
+        /// Defaults to true so that a missing stored setting row fails closed (no fee charged
+        /// on top of paid shipping) rather than open, matching the documented default.
         /// </summary>
-        public bool SuppressWhenShippingCharged { get; set; }
+        public bool SuppressWhenShippingCharged { get; set; } = true;
     }
 }

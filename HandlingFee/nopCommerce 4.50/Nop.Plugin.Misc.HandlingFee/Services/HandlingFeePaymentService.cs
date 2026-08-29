@@ -73,6 +73,15 @@ namespace Nop.Plugin.Misc.HandlingFee.Services
             if (settings == null || !settings.Enabled)
                 return fee;
 
+            //cheap check first: a cart that needs no shipping never attracts the fee, so there
+            //is no reason to pay for the two totals calls below - each is called once per active
+            //payment method when rendering the payment method page, and shipping internally
+            //recomputes the subtotal again when "free shipping over X" is enabled, so both are
+            //expensive. Downloadable-only carts should cost nothing extra.
+            var requiresShipping = await _shoppingCartService.ShoppingCartRequiresShippingAsync(cart);
+            if (!requiresShipping)
+                return fee;
+
             //resolved lazily rather than injected, to avoid a DI cycle with
             //HandlingFeeOrderTotalCalculationService, which depends on IPaymentService
             var orderTotalCalculationService = _serviceProvider.GetRequiredService<IOrderTotalCalculationService>();
@@ -81,7 +90,6 @@ namespace Nop.Plugin.Misc.HandlingFee.Services
                 .GetShoppingCartSubTotalAsync(cart, false);
             var shippingTotal = (await orderTotalCalculationService
                 .GetShoppingCartShippingTotalAsync(cart, false)).shippingTotal;
-            var requiresShipping = await _shoppingCartService.ShoppingCartRequiresShippingAsync(cart);
 
             return fee + HandlingFeeCalculator.Calculate(settings, subTotalWithDiscount, shippingTotal, requiresShipping);
         }

@@ -82,8 +82,10 @@ namespace Nop.Plugin.Misc.HandlingFee
                 ["Plugins.Misc.HandlingFee.Fields.Enabled.Hint"] = "Charge a handling fee on qualifying orders.",
                 ["Plugins.Misc.HandlingFee.Fields.ThresholdAmount"] = "Order threshold",
                 ["Plugins.Misc.HandlingFee.Fields.ThresholdAmount.Hint"] = "The fee applies when the goods subtotal, after discounts, is at or below this amount. Shipping, tax, gift cards and reward points are not counted.",
+                ["Plugins.Misc.HandlingFee.Fields.ThresholdAmount.Negative"] = "The order threshold cannot be negative.",
                 ["Plugins.Misc.HandlingFee.Fields.FeeAmount"] = "Handling fee",
                 ["Plugins.Misc.HandlingFee.Fields.FeeAmount.Hint"] = "The amount charged, in the primary store currency.",
+                ["Plugins.Misc.HandlingFee.Fields.FeeAmount.Negative"] = "The handling fee cannot be negative.",
                 ["Plugins.Misc.HandlingFee.Fields.SuppressWhenShippingCharged"] = "No fee when shipping is charged",
                 ["Plugins.Misc.HandlingFee.Fields.SuppressWhenShippingCharged.Hint"] = "When ticked, any shipping charge above zero removes the handling fee entirely. Orders that need no shipping at all never attract the fee.",
                 ["Plugins.Misc.HandlingFee.Configuration.Saved"] = "The settings have been saved."

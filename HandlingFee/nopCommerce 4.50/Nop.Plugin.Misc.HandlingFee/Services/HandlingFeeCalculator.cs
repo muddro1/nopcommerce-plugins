@@ -37,6 +37,12 @@ namespace Nop.Plugin.Misc.HandlingFee.Services
             if (settings.SuppressWhenShippingCharged && (shippingTotal ?? decimal.Zero) > decimal.Zero)
                 return decimal.Zero;
 
+            //defence in depth: a misconfigured (e.g. negative) FeeAmount must never make an
+            //order cheaper. Validation on the settings form should already stop this at the
+            //source, but the calculator must not trust that it always will.
+            if (settings.FeeAmount <= decimal.Zero)
+                return decimal.Zero;
+
             return settings.FeeAmount;
         }
     }

@@ -78,5 +78,21 @@ namespace Nop.Plugin.Misc.HandlingFee.Tests
         {
             HandlingFeeCalculator.Calculate(null, 30m, 0m, true).Should().Be(0m);
         }
+
+        [Test]
+        public void Negative_fee_amount_is_never_returned()
+        {
+            var settings = Settings();
+            settings.FeeAmount = -4.95m;
+            HandlingFeeCalculator.Calculate(settings, 30m, 0m, true).Should().Be(0m);
+        }
+
+        [Test]
+        public void Zero_fee_amount_returns_zero()
+        {
+            var settings = Settings();
+            settings.FeeAmount = 0m;
+            HandlingFeeCalculator.Calculate(settings, 30m, 0m, true).Should().Be(0m);
+        }
     }
 }

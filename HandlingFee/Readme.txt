@@ -83,10 +83,16 @@ Where the fee appears
 The fee is charged through nopCommerce's own payment method additional fee
 channel, so it shows on the cart page, checkout, order confirmation, order
 details and PDF invoice under the existing "Payment method fee" label - the
-same label a payment method's own surcharge would use. If that label has been
-renamed store-wide (Admin area > Configuration > Languages > resource
-"Checkout.PaymentMethodAdditionalFee" and related keys), the handling fee
-appears under the renamed label too. If the chosen payment method also
+same label a payment method's own surcharge would use. That label is driven
+by two separate locale resources, and both would need renaming to relabel it
+store-wide (Admin area > Configuration > Languages):
+
+  - "ShoppingCart.Totals.PaymentMethodAdditionalFee" - used on the cart page
+    and throughout checkout (Nop.Web's OrderTotals view component).
+  - "Order.PaymentMethodAdditionalFee" - used on the order details page.
+
+If either resource is renamed, the handling fee appears under the renamed
+label wherever that resource is used. If the chosen payment method also
 charges its own fee, the two amounts are combined into a single total; the
 line does not distinguish which part came from which source.
 
@@ -96,6 +102,21 @@ additional fee is taxable" checkbox and its associated tax category decide
 whether and how the fee is taxed. Whichever tax provider is installed on the
 store applies its normal rate to the fee exactly as it would to a payment
 surcharge. This plugin adds no tax settings of its own.
+
+A consequence of riding this channel: on the payment method selection page
+(/checkout/paymentmethod), nopCommerce calls the fee calculation once per
+active payment method so that it can list each method's own surcharge next
+to it. This plugin's fee is not a per-method surcharge - it is a single,
+once-per-order charge - but nopCommerce has no way to know that, so it
+prints the same handling fee amount next to every payment method shown on
+that page. With three active payment methods and a 4.95 handling fee, the
+customer sees "4.95" next to all three, as though choosing any one of them
+adds a 4.95 surcharge. In fact the fee is charged exactly once regardless of
+which method is chosen; the repeated display is a side effect of the
+attribution nopCommerce assumes for that channel, not a bug in the amount
+charged. There is no supported way to suppress the repeated display without
+abandoning the payment-fee channel entirely, which would also lose the free
+tax, persistence and reporting integration it provides.
 
 
 Installing
@@ -162,3 +183,32 @@ Notes if you are not building with the .NET 6 SDK:
     Nop.Web.staticwebassets.*) into the plugin output that the post-build
     helper does not clean up. Delete them; the plugin folder should contain
     only the files listed in the shipped "Misc.HandlingFee" directory.
+
+
+Running the tests
+------------------
+"Nop.Plugin.Misc.HandlingFee.Tests" contains the test suite. Like the plugin
+itself, its .csproj carries a ProjectReference to the plugin project by a
+relative path ("..\..\Plugins\Nop.Plugin.Misc.HandlingFee\..."), so it only
+resolves once the test project sits at src/Tests/ of a nopCommerce 4.50.2
+source tree, alongside the plugin at src/Plugins/. It cannot be built or run
+from this repository in place.
+
+  1. Copy both projects into the nopCommerce tree:
+
+       rm -rf <nopcommerce>/src/Plugins/Nop.Plugin.Misc.HandlingFee \
+              <nopcommerce>/src/Tests/Nop.Plugin.Misc.HandlingFee.Tests
+       cp -R Nop.Plugin.Misc.HandlingFee <nopcommerce>/src/Plugins/
+       cp -R Nop.Plugin.Misc.HandlingFee.Tests <nopcommerce>/src/Tests/
+
+  2. Run the tests from inside the copied test project:
+
+       cd <nopcommerce>/src/Tests/Nop.Plugin.Misc.HandlingFee.Tests
+       DOTNET_ROLL_FORWARD=Major dotnet test
+
+The DOTNET_ROLL_FORWARD=Major prefix is required whenever the machine has
+only a newer .NET SDK installed and not the net6.0 runtime that
+global.json and the project files target: it tells the .NET host to roll
+forward to the highest installed major version instead of failing to find
+a matching net6.0 runtime. It is harmless, and unnecessary, on a machine
+that does have the net6.0 runtime installed.
