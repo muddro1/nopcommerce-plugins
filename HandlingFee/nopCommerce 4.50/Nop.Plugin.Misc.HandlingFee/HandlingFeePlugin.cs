@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Nop.Core;
 using Nop.Services.Common;
+using Nop.Plugin.Misc.HandlingFee.Services;
 using Nop.Services.Configuration;
 using Nop.Services.Localization;
 using Nop.Services.Plugins;
@@ -14,6 +15,7 @@ namespace Nop.Plugin.Misc.HandlingFee
 
         private readonly ILocalizationService _localizationService;
         private readonly ISettingService _settingService;
+        private readonly HandlingFeeLabelService _labelService;
         private readonly IWebHelper _webHelper;
 
         #endregion
@@ -22,11 +24,13 @@ namespace Nop.Plugin.Misc.HandlingFee
 
         public HandlingFeePlugin(ILocalizationService localizationService,
             ISettingService settingService,
-            IWebHelper webHelper)
+            IWebHelper webHelper,
+            HandlingFeeLabelService labelService)
         {
             _localizationService = localizationService;
             _settingService = settingService;
             _webHelper = webHelper;
+            _labelService = labelService;
         }
 
         #endregion
@@ -64,6 +68,12 @@ namespace Nop.Plugin.Misc.HandlingFee
 
         public override async Task UninstallAsync()
         {
+            //put back any core locale resources this plugin overwrote, before the
+            //backup of them is deleted along with the settings
+            var settings = await _settingService.LoadSettingAsync<HandlingFeeSettings>();
+            if (!string.IsNullOrEmpty(settings?.LabelBackupJson))
+                await _labelService.RestoreAsync(settings.LabelBackupJson);
+
             await _settingService.DeleteSettingAsync<HandlingFeeSettings>();
             await _localizationService.DeleteLocaleResourcesAsync("Plugins.Misc.HandlingFee");
 
@@ -78,6 +88,8 @@ namespace Nop.Plugin.Misc.HandlingFee
         {
             await _localizationService.AddOrUpdateLocaleResourceAsync(new Dictionary<string, string>
             {
+                ["Plugins.Misc.HandlingFee.Fields.Label"] = "Label shown to customers",
+                ["Plugins.Misc.HandlingFee.Fields.Label.Hint"] = "Optional. The wording the fee appears under on the cart, checkout, order details, invoices, emails and admin order screens - for example \"Small Order Handling Charge\". Leave blank to keep nopCommerce's own wording. This applies store-wide and to every language, because the underlying text is a shared nopCommerce resource rather than a per-store setting. Clearing this box restores the original wording.",
                 ["Plugins.Misc.HandlingFee.Fields.Enabled"] = "Enabled",
                 ["Plugins.Misc.HandlingFee.Fields.Enabled.Hint"] = "Charge a handling fee on qualifying orders.",
                 ["Plugins.Misc.HandlingFee.Fields.ThresholdAmount"] = "Order threshold",

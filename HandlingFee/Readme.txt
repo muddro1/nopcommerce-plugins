@@ -49,6 +49,11 @@ Admin area > Configuration > Local plugins > "Handling fee for small orders"
       Unticked: the fee is charged regardless of shipping cost, as long as
       the order is physical and at or below the threshold.
 
+  Label shown to customers
+      Optional. The wording the fee appears under, for example "Small Order
+      Handling Charge". Blank keeps nopCommerce's own wording. Applies
+      store-wide and to every language - see "Renaming the label" below.
+
 
 Worked examples
 ----------------
@@ -82,59 +87,49 @@ Where the fee appears
 ----------------------
 The fee is charged through nopCommerce's own payment method additional fee
 channel, so it shows on the cart page, checkout, order confirmation, order
-details and PDF invoice under the existing "Payment method fee" label - the
-same label a payment method's own surcharge would use.
+details and PDF invoice under the existing "Payment method additional fee"
+label - the same label a payment method's own surcharge would use. That
+wording can be changed; see the next section.
 
 
 Renaming the label (for example to "Small Order Handling Charge")
 -----------------------------------------------------------------
-The label is a core nopCommerce locale resource, not a plugin setting, so it
-is changed in the admin area rather than on the plugin's configuration page.
-There is no per-line label override: the two views that display the fee call
-@T("...") on a fixed resource name.
+Set the "Label shown to customers" box on the plugin's configuration page and
+save. The plugin writes that wording into the underlying nopCommerce locale
+resources for you, in every language, so the fee reads the same everywhere:
 
-Admin area > Configuration > Languages > (your language) > String resources,
-then search for "PaymentMethodAdditionalFee".
+  - cart page and checkout
+  - order details, for the customer and in the admin area
+  - PDF invoices
+  - order emails
+  - the admin order screens
 
-FOUR resources are customer-facing. Rename all four, or the fee will be
-labelled inconsistently depending on where the customer sees it:
+Leave the box blank to keep nopCommerce's own wording ("Payment method
+additional fee"). Clearing the box after using it restores the original
+wording.
 
-  ShoppingCart.Totals.PaymentMethodAdditionalFee
-      "Payment method additional fee"
-      Cart page and all of checkout.
+Two things to understand before using it.
 
-  Order.PaymentMethodAdditionalFee
-      "Payment method additional fee"
-      Order details page, both the customer's view and the admin's.
+First, this applies STORE-WIDE and to EVERY LANGUAGE. The text the fee appears
+under is a shared nopCommerce resource, not a per-store plugin setting, so
+there is no way to label it differently per store. That is also why the Label
+box has no "override for store" checkbox when the other settings do.
 
-  PDFInvoice.PaymentMethodAdditionalFee
-      "Payment Method Additional Fee:"
-      PDF invoices. NOTE the trailing colon is part of the value here -
-      keep it, or invoices lose the colon.
+Second, the resources are shared with nopCommerce's own payment method fee. If
+one of your payment methods also charges an additional fee, that fee will
+display under your label too, and the two amounts are combined into a single
+line and a single order column. If no payment method charges a fee - the usual
+case - the line belongs entirely to the handling fee and the label is exact.
 
-  Messages.Order.PaymentMethodAdditionalFee
-      "Payment method additional fee:"
-      Order emails. NOTE the trailing colon is part of the value here too.
+The plugin captures the original wording before the first time it overwrites
+it, and puts it back when the label is cleared or the plugin is uninstalled.
+The one limitation: if you hand-edit those resources in Configuration >
+Languages > String resources AFTER the plugin has applied a label, the plugin's
+captured copy is stale, and a later restore reverts your hand-edit.
 
-Two more are admin-only. Rename them as well if you want staff to see
-consistent wording on the order screens:
-
-  Admin.Orders.Fields.PaymentMethodAdditionalFee
-  Admin.Orders.Fields.Edit.PaymentMethodAdditionalFee
-
-Do NOT rename the "Admin.Configuration.Settings.Tax.*" resources. Those
-describe the nopCommerce tax setting itself, which genuinely is the payment
-method fee setting, and renaming them makes the tax settings page confusing.
-
-If the store runs more than one language, repeat this for each language -
-locale resources are per language, not per store.
-
-Because these are shared core resources, the rename applies to every use of
-that line. If a payment method also charges its own fee, its fee will display
-under the new label as well, and the two amounts are combined into a single
-total; the line does not distinguish which part came from which source. If no
-payment method charges a fee, that line belongs entirely to the handling fee
-and the rename is exact.
+The "Admin.Configuration.Settings.Tax.*" resources are deliberately left alone.
+They describe nopCommerce's tax setting, which genuinely is the payment method
+fee setting, and renaming them would make the tax settings page confusing.
 
 Because the fee rides this channel, its taxability is controlled from
 Configuration > Tax settings, not from this plugin: the "Payment method

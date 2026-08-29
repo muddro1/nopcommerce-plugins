@@ -7,6 +7,11 @@ namespace Nop.Plugin.Misc.HandlingFee.Models
     {
         public int ActiveStoreScopeConfiguration { get; set; }
 
+        //deliberately has no _OverrideForStore companion: locale resources are per language,
+        //not per store, so a per-store label is not something nopCommerce can deliver
+        [NopResourceDisplayName("Plugins.Misc.HandlingFee.Fields.Label")]
+        public string Label { get; set; }
+
         [NopResourceDisplayName("Plugins.Misc.HandlingFee.Fields.Enabled")]
         public bool Enabled { get; set; }
         public bool Enabled_OverrideForStore { get; set; }

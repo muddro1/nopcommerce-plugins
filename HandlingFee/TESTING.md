@@ -54,31 +54,32 @@ Save.
 > `Plugins.Misc.HandlingFee.Fields.FeeAmount`. Save, reload, and confirm the four
 > values persisted.
 
-### 1.3 Rename the label (optional, but do it before testing)
+### 1.3 Set the label (do this before testing)
 
-The fee displays under nopCommerce's shared "Payment method additional fee"
-label. To show it as **Small Order Handling Charge**, go to **Configuration →
-Languages → (your language) → String resources**, search
-`PaymentMethodAdditionalFee`, and rename these four customer-facing resources:
+On the same configuration page, set **Label shown to customers** to
+`Small Order Handling Charge` and save.
 
-| Resource | Current value | Note |
-| --- | --- | --- |
-| `ShoppingCart.Totals.PaymentMethodAdditionalFee` | Payment method additional fee | cart and checkout |
-| `Order.PaymentMethodAdditionalFee` | Payment method additional fee | order details |
-| `PDFInvoice.PaymentMethodAdditionalFee` | Payment Method Additional Fee**:** | **keep the trailing colon** |
-| `Messages.Order.PaymentMethodAdditionalFee` | Payment method additional fee**:** | **keep the trailing colon** |
+The plugin writes that wording into six nopCommerce locale resources across
+every language. Leaving it blank keeps nopCommerce's own "Payment method
+additional fee".
 
-Optionally also rename `Admin.Orders.Fields.PaymentMethodAdditionalFee` and
-`Admin.Orders.Fields.Edit.PaymentMethodAdditionalFee` so staff see consistent
-wording. Leave the `Admin.Configuration.Settings.Tax.*` ones alone — they
-describe the tax setting itself.
+Verify it took effect in all six places as you work through Part 2 — a missed
+one shows up as an invoice or email still saying "Payment method additional
+fee":
 
-Repeat per language if the store runs more than one.
+| Where | Check during |
+| --- | --- |
+| Cart and checkout totals | 2.1 |
+| Order details page (customer) | 2.4 |
+| Order details page (admin) | 2.4 |
+| PDF invoice — note it should end with a colon | 2.4 |
+| Order confirmation email — also ends with a colon | 2.4 |
+| Admin order list/edit fields | 2.4 |
 
-Doing this before you test matters for two reasons: the rest of this script
-refers to the line by its new name, and checking all four places is itself part
-of the test — a missed resource shows up as an invoice or email still saying
-"Payment method additional fee".
+Then **clear the box, save, and confirm the wording reverts** to "Payment
+method additional fee" everywhere. That proves the backup-and-restore works —
+without it, uninstalling the plugin would leave your store permanently
+relabelled by something no longer installed. Set the label back afterwards.
 
 ### 1.4 Turn fee tax off for Part 2
 

@@ -11,6 +11,16 @@
             <div class="card-body">
                 <div class="form-group row">
                     <div class="col-md-3">
+                        @*no store-override checkbox: locale resources are per language, not per store*@
+                        <nop-label asp-for="Label" />
+                    </div>
+                    <div class="col-md-9">
+                        <nop-editor asp-for="Label" />
+                        <span asp-validation-for="Label"></span>
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <div class="col-md-3">
                         <nop-override-store-checkbox asp-for="Enabled_OverrideForStore" asp-input="Enabled" asp-store-scope="@Model.ActiveStoreScopeConfiguration" />
                         <nop-label asp-for="Enabled" />
                     </div>

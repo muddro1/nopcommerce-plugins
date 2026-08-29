@@ -2,10 +2,10 @@
   "Group": "Misc",
   "FriendlyName": "Handling fee for small orders",
   "SystemName": "Misc.HandlingFee",
-  "Version": "1.00",
+  "Version": "1.01",
   "SupportedVersions": [ "4.50" ],
   "Author": "Zach Malamud",
   "DisplayOrder": 1,
   "FileName": "Nop.Plugin.Misc.HandlingFee.dll",
-  "Description": "Adds a configurable handling fee to physical orders at or below a threshold value that ship for free."
+  "Description": "Adds a configurable handling fee to physical orders at or below a threshold value that ship for free. The label the fee appears under can be customised."
 }
