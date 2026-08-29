@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Nop.Core.Infrastructure;
+using Nop.Plugin.Misc.HandlingFee.Factories;
 using Nop.Plugin.Misc.HandlingFee.Services;
 using Nop.Services.Orders;
 using Nop.Services.Payments;
@@ -20,6 +21,10 @@ namespace Nop.Plugin.Misc.HandlingFee.Infrastructure
 
             services.AddScoped<IPaymentService, HandlingFeePaymentService>();
             services.AddScoped<IOrderTotalCalculationService, HandlingFeeOrderTotalCalculationService>();
+
+            //display-only: stops the handling fee being shown against every payment method
+            //on the payment selection page. Nop.Web registers this at Order 2002; we are 3000.
+            services.AddScoped<Nop.Web.Factories.ICheckoutModelFactory, HandlingFeeCheckoutModelFactory>();
         }
 
         public void Configure(IApplicationBuilder application)

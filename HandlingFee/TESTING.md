@@ -165,13 +165,22 @@ appears later in checkout, something is wrong.
 
 Then pick the paid shipping method and confirm the line **disappears**.
 
-### 2.2 On the payment method page — expected oddity
+### 2.2 On the payment method page
 
-With several payment methods active you will see the same 4.95 shown next to
-**every** payment method, as though each one charged it. This is expected and
-documented: nopCommerce asks each method for its fee, and ours answers the same
-number every time. **The fee is charged once regardless of which method is
-chosen.** Confirm the placed order carries 4.95 once, not once per method.
+With several payment methods active, **none of them should show a fee** next to
+it — the handling fee is not a payment surcharge and the plugin suppresses it
+from that list.
+
+If a payment method genuinely charges its own additional fee, that fee **should**
+still appear beside it, and should not include the handling fee.
+
+The order total on that page still includes the handling fee once. Confirm the
+placed order carries it exactly once — this is the check that matters, and 2.3
+verifies it against the stored columns.
+
+> Before version 1.02 the same handling fee appeared beside every payment
+> method. If you see that, the plugin folder was not replaced or the site was
+> not restarted.
 
 ### 2.3 After placing each order — verify the stored columns
 

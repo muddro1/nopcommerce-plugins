@@ -94,6 +94,20 @@ namespace Nop.Plugin.Misc.HandlingFee.Services
             return fee + HandlingFeeCalculator.Calculate(settings, subTotalWithDiscount, shippingTotal, requiresShipping);
         }
 
+
+        /// <summary>
+        /// The payment method's OWN additional fee, without this plugin's handling fee
+        /// folded in. Used by the checkout model factory so the payment method selection
+        /// page shows each method's real surcharge rather than our once-per-order fee.
+        /// </summary>
+        /// <param name="cart">Shopping cart</param>
+        /// <param name="paymentMethodSystemName">Payment method system name</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains the fee</returns>
+        public virtual async Task<decimal> GetPaymentMethodOwnFeeAsync(IList<ShoppingCartItem> cart, string paymentMethodSystemName)
+        {
+            return await base.GetAdditionalHandlingFeeAsync(cart, paymentMethodSystemName);
+        }
+
         #endregion
     }
 }

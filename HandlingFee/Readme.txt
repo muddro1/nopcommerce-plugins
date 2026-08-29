@@ -138,20 +138,27 @@ whether and how the fee is taxed. Whichever tax provider is installed on the
 store applies its normal rate to the fee exactly as it would to a payment
 surcharge. This plugin adds no tax settings of its own.
 
-A consequence of riding this channel: on the payment method selection page
-(/checkout/paymentmethod), nopCommerce calls the fee calculation once per
-active payment method so that it can list each method's own surcharge next
-to it. This plugin's fee is not a per-method surcharge - it is a single,
-once-per-order charge - but nopCommerce has no way to know that, so it
-prints the same handling fee amount next to every payment method shown on
-that page. With three active payment methods and a 4.95 handling fee, the
-customer sees "4.95" next to all three, as though choosing any one of them
-adds a 4.95 surcharge. In fact the fee is charged exactly once regardless of
-which method is chosen; the repeated display is a side effect of the
-attribution nopCommerce assumes for that channel, not a bug in the amount
-charged. There is no supported way to suppress the repeated display without
-abandoning the payment-fee channel entirely, which would also lose the free
-tax, persistence and reporting integration it provides.
+A note on the payment method selection page
+--------------------------------------------
+nopCommerce asks every active payment method for its own surcharge so it can
+list that surcharge beside each method. This plugin's fee is not a per-method
+surcharge - it is a single, once-per-order charge - so answering that question
+honestly would make the same handling fee appear next to every payment method,
+as though picking any one of them added it.
+
+The plugin corrects this. It replaces nopCommerce's checkout model factory so
+that the payment method page shows each method's OWN surcharge only, and the
+handling fee is left out of that list. A payment method that genuinely charges
+a fee still displays it correctly.
+
+This correction is display-only. The fee itself is untouched: it still reaches
+the order total, the stored order columns, invoices and emails exactly as
+before, and it is charged once per order regardless of which payment method
+the customer chooses.
+
+If another plugin replaces nopCommerce's payment service, this correction
+stands aside and the page reverts to the default behaviour rather than showing
+figures it cannot vouch for.
 
 
 Installing
