@@ -1,0 +1,11 @@
+{
+  "Group": "Discount requirements",
+  "FriendlyName": "Customer has only these products in the cart",
+  "SystemName": "DiscountRequirement.HasOnlyProducts",
+  "Version": "1.02",
+  "SupportedVersions": [ "4.50" ],
+  "Author": "nopCommerce team",
+  "DisplayOrder": 1,
+  "FileName": "Nop.Plugin.DiscountRules.HasOnlyProducts.dll",
+  "Description": "This plugin allows you to configure discounts for customers whose cart contains certain products - all of them or any one of them - and, optionally, nothing else. Based on the 'Customer has all of these products in the cart' plugin by the nopCommerce team."
+}
