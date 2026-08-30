@@ -250,7 +250,7 @@ allow-list, ten files:
   - Nop.Plugin.Misc.BetterSearch.deps.json
   - Nop.Plugin.Misc.BetterSearch.pdb
   - plugin.json
-  - logo.jpg
+  - logo.png
   - Views\_ViewImports.cshtml
   - Views\Configure.cshtml
   - Lucene.Net.dll
