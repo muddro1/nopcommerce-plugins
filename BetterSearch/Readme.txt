@@ -131,6 +131,30 @@ count and whether the index is currently available, and has a "Rebuild
 now" button.
 
 
+Product images in the autocomplete dropdown
+--------------------------------------------
+nopCommerce can show a product thumbnail beside each autocomplete suggestion.
+This is a stock feature, not part of this plugin, and it works normally with
+the plugin installed - the plugin decides which products match, nopCommerce
+still builds the display models and their picture URLs.
+
+Two settings, in two different places:
+
+  Configuration > Settings > Catalog settings
+      "Show product images in search auto complete" - off by default.
+
+  Configuration > Settings > Media settings
+      "Auto complete search thumb picture size" - defaults to 20 pixels,
+      which is too small to recognise a product. 40 is a more useful
+      starting point; adjust it against your own photography.
+
+Products without a picture fall back to the store's default image, so the
+dropdown stays aligned rather than showing gaps.
+
+This applies to the storefront autocomplete only. The admin product search
+uses a different view and shows no thumbnails.
+
+
 Installing
 -----------
 "Misc.BetterSearch" contains the compiled plugin. Drop it into the
