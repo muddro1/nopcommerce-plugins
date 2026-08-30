@@ -23,10 +23,14 @@ namespace Nop.Plugin.Misc.BetterSearch.Services
     /// render: callers degrade to "no results" and fall back to stock search instead.
     ///
     /// Search itself is two-pass. The first pass is strict - identifiers match exactly, by
-    /// segment, or by substring, but never fuzzily. Only when that pass finds nothing does a
-    /// second, fuzzy pass run, and only then is <see cref="LastSearchWasApproximate"/> set. Two
-    /// part numbers one digit apart are different parts; a strict hit must never be
-    /// contaminated by a fuzzy identifier match.
+    /// segment, or by substring, but never fuzzily. A second, fuzzy pass runs only when that
+    /// strict pass finds nothing AND the caller allows it, and only then is
+    /// <see cref="LastSearchWasApproximate"/> set. Two part numbers one digit apart are
+    /// different parts; a strict hit must never be contaminated by a fuzzy identifier match.
+    ///
+    /// The fuzzy pass is off unless asked for, because nothing in this build labels its
+    /// results as approximate - and an unlabelled near-miss part number is worse than no
+    /// result at all.
     /// </summary>
     public class SearchIndexManager : IDisposable
     {

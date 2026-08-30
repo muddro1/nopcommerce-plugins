@@ -202,10 +202,11 @@ namespace Nop.Plugin.Misc.BetterSearch.Tests
         [Test]
         public async Task Rebuild_that_throws_mid_loop_leaves_the_previous_index_committed()
         {
-            //CommitOnClose must be false: without it, an exception thrown after some documents
-            //have been added but before the explicit Commit() call would still commit a
-            //PARTIAL index when the `using` block disposes the writer, silently replacing a
-            //good index with a broken one
+            //This Lucene.Net port has no IndexWriterConfig.CommitOnClose switch - verified by
+            //reflection against the shipped assembly - and Dispose() always commits whatever is
+            //buffered. So the failure path calls Rollback() explicitly. Without it, an exception
+            //thrown after some documents were added would commit a PARTIAL index, silently
+            //replacing a good one with a broken one while reporting failure.
             var productsThatThrowPartway = ThrowingProducts(Product(9, "Should never appear", "fmsa-zz-0001"));
 
             var rebuilt = await _manager.RebuildAsync(productsThatThrowPartway);
