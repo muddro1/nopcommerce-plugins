@@ -2,7 +2,7 @@
   "Group": "Misc",
   "FriendlyName": "Handling fee for small orders",
   "SystemName": "Misc.HandlingFee",
-  "Version": "1.02",
+  "Version": "1.03",
   "SupportedVersions": [ "4.50" ],
   "Author": "Zach Malamud",
   "DisplayOrder": 1,
