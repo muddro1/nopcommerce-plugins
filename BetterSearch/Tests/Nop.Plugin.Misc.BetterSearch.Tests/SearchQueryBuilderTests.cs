@@ -174,5 +174,40 @@ namespace Nop.Plugin.Misc.BetterSearch.Tests
             //guards against the word-splitting change breaking pure text queries
             _index.Search("assembly flange").Should().Contain(TargetProduct);
         }
+
+        [Test]
+        public void Gtin_matching_is_case_insensitive_both_ways()
+        {
+            //an ISBN-10 can end in "X" - case must never be significant, on either side
+            using var index = new InMemoryIndexFixture(new[]
+            {
+                new ProductIndexInput { ProductId = 99, Name = "Textbook", Gtin = "080442957X" }
+            });
+
+            index.Search("080442957X").Should().Contain(99);
+            index.Search("080442957x").Should().Contain(99);
+        }
+
+        [Test]
+        public void A_combination_sku_is_found_the_same_way_as_the_products_own_sku()
+        {
+            using var index = new InMemoryIndexFixture(new[]
+            {
+                new ProductIndexInput
+                {
+                    ProductId = 55,
+                    Name = "Flange assembly",
+                    Sku = "fmsa-ab-1234",
+                    CombinationSkus = new[] { "fmsa-ab-1234-xl" }
+                }
+            });
+
+            //the variant SKU, not just the parent's own SKU
+            index.Search("1234-xl").Should().Contain(55);
+
+            //the parent's own SKU must keep matching too - the variant is additive, not a
+            //replacement
+            index.Search("1234").Should().Contain(55);
+        }
     }
 }

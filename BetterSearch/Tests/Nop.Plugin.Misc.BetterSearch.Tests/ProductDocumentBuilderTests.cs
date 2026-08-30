@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using FluentAssertions;
 using Lucene.Net.Documents;
@@ -110,6 +111,57 @@ namespace Nop.Plugin.Misc.BetterSearch.Tests
             document.Get(BetterSearchDefaults.FIELD_PRODUCT_ID).Should().Be("7");
             document.Get(BetterSearchDefaults.FIELD_NAME).Should().Be("Bare product");
             document.GetValues(BetterSearchDefaults.FIELD_SKU_SEGMENT).Should().BeEmpty();
+        }
+
+        [Test]
+        public void Indexes_gtin_lowercased_for_case_insensitivity()
+        {
+            //an ISBN-10 can end in "X" - case is never significant on any field, GTIN included
+            var input = new ProductIndexInput { ProductId = 1, Name = "Textbook", Gtin = "080442957X" };
+
+            var document = ProductDocumentBuilder.Build(input);
+
+            document.Get(BetterSearchDefaults.FIELD_GTIN).Should().Be("080442957x");
+        }
+
+        [Test]
+        public void Indexes_a_combination_sku_through_the_same_fields_as_the_main_sku()
+        {
+            var input = new ProductIndexInput
+            {
+                ProductId = 42,
+                Name = "Flange assembly",
+                Sku = "fmsa-ab-1234",
+                CombinationSkus = new[] { "fmsa-ab-1234-XL" }
+            };
+
+            var document = ProductDocumentBuilder.Build(input);
+
+            var rawValues = document.GetValues(BetterSearchDefaults.FIELD_SKU_RAW);
+            rawValues.Should().Contain("fmsa-ab-1234");
+            rawValues.Should().Contain("fmsa-ab-1234-xl");
+
+            var segments = document.GetValues(BetterSearchDefaults.FIELD_SKU_SEGMENT);
+            segments.Should().Contain(new[] { "fmsa", "ab", "1234", "xl" });
+        }
+
+        [Test]
+        public void A_product_with_no_combinations_indexes_exactly_as_before()
+        {
+            var input = new ProductIndexInput
+            {
+                ProductId = 42,
+                Name = "Flange assembly",
+                Sku = "fmsa-ab-1234"
+                //CombinationSkus left at its default empty list
+            };
+
+            Action build = () => ProductDocumentBuilder.Build(input);
+
+            build.Should().NotThrow();
+
+            var document = ProductDocumentBuilder.Build(input);
+            document.GetValues(BetterSearchDefaults.FIELD_SKU_RAW).Should().Equal("fmsa-ab-1234");
         }
     }
 }

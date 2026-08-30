@@ -32,14 +32,33 @@ namespace Nop.Plugin.Misc.BetterSearch.Services
                 BetterSearchDefaults.FIELD_SKU_SEGMENT,
                 BetterSearchDefaults.FIELD_SKU_NGRAM);
 
+            //variant (attribute combination) SKUs go through the SAME fields as the product's
+            //own SKU, not separate ones - that is what makes substring matching, segment
+            //matching, case-insensitivity and the strict-pass exactness rules apply to a
+            //variant SKU automatically, with no query-builder change needed. Stock nopCommerce
+            //unions these in as a separate query; this plugin's override cannot do that (see
+            //ProductIndexInputFactory), so they have to be indexed here instead.
+            if (input.CombinationSkus != null)
+            {
+                foreach (var combinationSku in input.CombinationSkus)
+                {
+                    AddIdentifier(document, combinationSku,
+                        BetterSearchDefaults.FIELD_SKU_RAW,
+                        BetterSearchDefaults.FIELD_SKU_SEGMENT,
+                        BetterSearchDefaults.FIELD_SKU_NGRAM);
+                }
+            }
+
             AddIdentifier(document, input.ManufacturerPartNumber,
                 BetterSearchDefaults.FIELD_MPN_RAW,
                 BetterSearchDefaults.FIELD_MPN_SEGMENT,
                 BetterSearchDefaults.FIELD_MPN_NGRAM);
 
-            //GTIN is an external identifier: right or wrong, never partially matched
+            //GTIN is an external identifier: right or wrong, never partially matched. Lowercased
+            //like every other identifier field - an ISBN-10 can end in "X", and case is never
+            //significant on any field.
             if (!string.IsNullOrWhiteSpace(input.Gtin))
-                document.Add(new StringField(BetterSearchDefaults.FIELD_GTIN, input.Gtin.Trim(), Field.Store.YES));
+                document.Add(new StringField(BetterSearchDefaults.FIELD_GTIN, input.Gtin.Trim().ToLowerInvariant(), Field.Store.YES));
 
             AddEach(document, BetterSearchDefaults.FIELD_TAGS, input.Tags);
             AddEach(document, BetterSearchDefaults.FIELD_CATEGORIES, input.Categories);

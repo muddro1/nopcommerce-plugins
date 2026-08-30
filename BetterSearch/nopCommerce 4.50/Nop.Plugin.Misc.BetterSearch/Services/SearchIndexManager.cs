@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading.Tasks;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
@@ -46,11 +48,16 @@ namespace Nop.Plugin.Misc.BetterSearch.Services
 
         /// <summary>
         /// Product ids matching <paramref name="queryText"/>, best match first. Runs the strict
-        /// pass first; only if that returns nothing does it fall back to the fuzzy pass, setting
-        /// <see cref="LastSearchWasApproximate"/> accordingly. Never throws - a missing, locked
-        /// or corrupt index degrades to an empty result.
+        /// pass first; only if that returns nothing AND <paramref name="allowApproximateFallback"/>
+        /// is true does it fall back to the fuzzy pass, setting
+        /// <see cref="LastSearchWasApproximate"/> accordingly. When
+        /// <paramref name="allowApproximateFallback"/> is false (the default), the fuzzy pass
+        /// never runs and <see cref="LastSearchWasApproximate"/> stays false - nothing today
+        /// labels an approximate result as such, and two part numbers one digit apart are
+        /// different parts, so a silent guess must never be shown. Never throws - a missing,
+        /// locked or corrupt index degrades to an empty result.
         /// </summary>
-        public virtual Task<IList<int>> SearchAsync(string queryText, int maxResults)
+        public virtual Task<IList<int>> SearchAsync(string queryText, int maxResults, bool allowApproximateFallback = false)
         {
             LastSearchWasApproximate = false;
 
@@ -62,6 +69,9 @@ namespace Nop.Plugin.Misc.BetterSearch.Services
 
                 var strictResults = RunQuery(searcher, SearchQueryBuilder.Build(queryText, false), maxResults);
                 if (strictResults.Count > 0)
+                    return Task.FromResult<IList<int>>(strictResults);
+
+                if (!allowApproximateFallback)
                     return Task.FromResult<IList<int>>(strictResults);
 
                 var fuzzyResults = RunQuery(searcher, SearchQueryBuilder.Build(queryText, true), maxResults);
@@ -107,12 +117,37 @@ namespace Nop.Plugin.Misc.BetterSearch.Services
                 var analyzer = new StandardAnalyzer(Version);
                 var config = new IndexWriterConfig(Version, analyzer) { OpenMode = OpenMode.CREATE };
 
-                using (var writer = new IndexWriter(directory, config))
+                //This Lucene.Net port has no IndexWriterConfig.CommitOnClose switch - Dispose()
+                //always behaves like a normal close, which commits whatever has been buffered.
+                //Left to a plain `using`, an exception thrown partway through the document loop
+                //would still commit a PARTIAL index when the block disposes the writer,
+                //replacing a good index with a broken one while telling the admin nothing
+                //changed. So this is NOT a `using`: on the success path the writer commits
+                //explicitly and then disposes normally, but on any failure the catch below
+                //calls Rollback() instead, which discards every change made since the writer
+                //was opened and closes without committing - leaving the previous index
+                //completely untouched.
+                var writer = new IndexWriter(directory, config);
+                try
                 {
                     foreach (var product in products)
                         writer.AddDocument(ProductDocumentBuilder.Build(product));
 
                     writer.Commit();
+                    writer.Dispose();
+                }
+                catch
+                {
+                    try
+                    {
+                        writer.Rollback();
+                    }
+                    catch
+                    {
+                        //best effort - the outer catch below still reports failure either way
+                    }
+
+                    throw;
                 }
 
                 _directory = directory;
@@ -184,6 +219,58 @@ namespace Nop.Plugin.Misc.BetterSearch.Services
             catch
             {
                 return Task.FromResult(0);
+            }
+        }
+
+        /// <summary>
+        /// A content checksum over the whole index: a stable projection of every live document
+        /// (product id, raw SKU, name), sorted by product id so write order can never affect the
+        /// result, hashed with SHA-256. Document counts alone catch inserts and deletes but not
+        /// a product whose SKU or name changed via a path that raised no event - the count stays
+        /// identical while the content silently goes stale, and <see cref="DriftDetector"/>
+        /// needs this to catch that case too. Returns an empty string, never throws, when the
+        /// index cannot be read.
+        /// </summary>
+        public virtual Task<string> ContentChecksumAsync()
+        {
+            try
+            {
+                var searcher = GetSearcher();
+                if (searcher == null)
+                    return Task.FromResult(string.Empty);
+
+                var reader = searcher.IndexReader;
+                var liveDocs = MultiFields.GetLiveDocs(reader);
+
+                var projections = new List<(int ProductId, string Line)>();
+
+                for (var docId = 0; docId < reader.MaxDoc; docId++)
+                {
+                    //Lucene keeps a deleted document's slot until the next merge; skipping it
+                    //here is what keeps a deleted-but-not-yet-merged document out of the checksum
+                    if (liveDocs != null && !liveDocs.Get(docId))
+                        continue;
+
+                    var document = reader.Document(docId);
+                    var idText = document.Get(BetterSearchDefaults.FIELD_PRODUCT_ID);
+                    if (!int.TryParse(idText, out var productId))
+                        continue;
+
+                    var sku = document.Get(BetterSearchDefaults.FIELD_SKU_RAW) ?? string.Empty;
+                    var name = document.Get(BetterSearchDefaults.FIELD_NAME) ?? string.Empty;
+
+                    projections.Add((productId, $"{productId}|{sku}|{name}"));
+                }
+
+                var stableText = string.Join("\n", projections.OrderBy(p => p.ProductId).Select(p => p.Line));
+
+                using var sha = SHA256.Create();
+                var hash = sha.ComputeHash(Encoding.UTF8.GetBytes(stableText));
+                return Task.FromResult(Convert.ToHexString(hash));
+            }
+            catch
+            {
+                return Task.FromResult(string.Empty);
             }
         }
 

@@ -46,8 +46,11 @@ namespace Nop.Plugin.Misc.BetterSearch.Tasks
         public virtual async Task ExecuteAsync()
         {
             //recorded before the rebuild, while it still reflects what shoppers have been
-            //searching against - the whole point of the comparison below
+            //searching against - the whole point of the comparison below. The checksum catches
+            //what the count alone cannot: a product whose SKU or name changed via a path that
+            //raised no event, where the document count before and after is identical.
             var liveCount = await _searchIndexManager.DocumentCountAsync();
+            var liveChecksum = await _searchIndexManager.ContentChecksumAsync();
 
             //keyword-free: IProductService resolves to this plugin's own
             //BetterSearchProductService, and a keyword here would search the very index this
@@ -70,8 +73,9 @@ namespace Nop.Plugin.Misc.BetterSearch.Tasks
             }
 
             var rebuiltCount = await _searchIndexManager.DocumentCountAsync();
+            var rebuiltChecksum = await _searchIndexManager.ContentChecksumAsync();
 
-            var report = DriftDetector.Compare(liveCount, rebuiltCount);
+            var report = DriftDetector.Compare(liveCount, rebuiltCount, liveChecksum, rebuiltChecksum);
             if (report.HasDrifted)
                 await _logger.WarningAsync($"BetterSearch: {report.Message}");
         }

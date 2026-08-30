@@ -118,13 +118,15 @@ namespace Nop.Plugin.Misc.BetterSearch
                 ["Plugins.Misc.BetterSearch.Fields.Enabled.Hint"] = "Use the Lucene-backed index for storefront product search. Leave off until the index has been built at least once.",
                 ["Plugins.Misc.BetterSearch.Fields.MaxIndexResults"] = "Maximum index results",
                 ["Plugins.Misc.BetterSearch.Fields.MaxIndexResults.Hint"] = "The maximum number of product ids taken from the index before nopCommerce applies its own filters.",
+                ["Plugins.Misc.BetterSearch.Fields.AllowApproximateFallback"] = "Allow approximate identifier matches",
+                ["Plugins.Misc.BetterSearch.Fields.AllowApproximateFallback.Hint"] = "When an exact SKU or part number search finds nothing, allow a fuzzy fallback that can return a DIFFERENT part number than the one typed - two part numbers one digit apart are different parts. Nothing in the storefront currently labels such a result as approximate, so a customer has no way to tell a guess from a confirmed match and may order the wrong part. Leave this off until a widget exists that marks approximate results as such.",
                 ["Plugins.Misc.BetterSearch.Configuration.Saved"] = "The settings have been saved.",
                 ["Plugins.Misc.BetterSearch.IndexStatus.Title"] = "Index status",
                 ["Plugins.Misc.BetterSearch.IndexStatus.DocumentCount"] = "Documents in index",
                 ["Plugins.Misc.BetterSearch.IndexStatus.Available"] = "Index available",
                 ["Plugins.Misc.BetterSearch.IndexStatus.RebuildNow"] = "Rebuild now",
                 ["Plugins.Misc.BetterSearch.IndexStatus.RebuildNow.Success"] = "The search index has been rebuilt. {0} product(s) are now indexed.",
-                ["Plugins.Misc.BetterSearch.IndexStatus.RebuildNow.Failed"] = "The search index could not be rebuilt. The previous index is unchanged and search continues to work; check the system log for the underlying error.",
+                ["Plugins.Misc.BetterSearch.IndexStatus.RebuildNow.Failed"] = "The search index rebuild failed. The index may now be incomplete. Check the system log for the underlying error, then rebuild again.",
                 ["Plugins.Misc.BetterSearch.IndexStatus.RebuildNow.CountMismatch"] = "The rebuild finished but the index holds {1} document(s) for {0} product(s). Check the system log, then rebuild again.",
                 ["Plugins.Misc.BetterSearch.MinimumSearchTermWarning"] = "The store's minimum search term length is currently {0} characters. nopCommerce rejects any search term shorter than this in CatalogModelFactory before Better Search is ever consulted, so this plugin cannot see - let alone fix - a query that never reaches it. The store's SKU pattern (for example fmsa-xx-xxxx) has a two-character middle segment that staff regularly search by, so set Minimum search term length to 2 under Configuration > Settings > Catalog settings."
             });

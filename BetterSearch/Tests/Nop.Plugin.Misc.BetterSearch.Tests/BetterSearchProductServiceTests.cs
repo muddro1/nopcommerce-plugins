@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Moq;
 using Nop.Core.Domain.Catalog;
+using Nop.Core.Domain.Customers;
 using NUnit.Framework;
 
 namespace Nop.Plugin.Misc.BetterSearch.Tests
@@ -45,7 +46,7 @@ namespace Nop.Plugin.Misc.BetterSearch.Tests
             result.Select(p => p.Id).Should().Equal(1);
 
             harness.SearchIndexManager.Verify(x => x.IsAvailableAsync(), Times.Never);
-            harness.SearchIndexManager.Verify(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<int>()), Times.Never);
+            harness.SearchIndexManager.Verify(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<bool>()), Times.Never);
         }
 
         [Test]
@@ -63,7 +64,7 @@ namespace Nop.Plugin.Misc.BetterSearch.Tests
             result.Select(p => p.Id).Should().BeEquivalentTo(new[] { 1, 2 });
 
             harness.SearchIndexManager.Verify(x => x.IsAvailableAsync(), Times.Never);
-            harness.SearchIndexManager.Verify(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<int>()), Times.Never);
+            harness.SearchIndexManager.Verify(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<bool>()), Times.Never);
         }
 
         [Test]
@@ -84,7 +85,7 @@ namespace Nop.Plugin.Misc.BetterSearch.Tests
             result.Select(p => p.Id).Should().Equal(baseResult.Select(p => p.Id));
 
             harness.SearchIndexManager.Verify(x => x.IsAvailableAsync(), Times.Never);
-            harness.SearchIndexManager.Verify(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<int>()), Times.Never);
+            harness.SearchIndexManager.Verify(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<bool>()), Times.Never);
         }
 
         [Test]
@@ -101,7 +102,7 @@ namespace Nop.Plugin.Misc.BetterSearch.Tests
 
             result.Select(p => p.Id).Should().Equal(1);
 
-            harness.SearchIndexManager.Verify(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<int>()), Times.Never);
+            harness.SearchIndexManager.Verify(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<bool>()), Times.Never);
         }
 
         [Test]
@@ -117,7 +118,27 @@ namespace Nop.Plugin.Misc.BetterSearch.Tests
             var result = await service.SearchProductsAsync(keywords: "Widget");
 
             result.Select(p => p.Id).Should().Equal(1);
-            harness.SearchIndexManager.Verify(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<int>()), Times.Never);
+            harness.SearchIndexManager.Verify(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<bool>()), Times.Never);
+        }
+
+        [Test]
+        public async Task Index_failure_logs_a_warning_naming_the_exception_before_delegating()
+        {
+            //a locked, corrupt or deleted index must never degrade every storefront search
+            //silently - the operator needs a signal, not just "search got worse"
+            var harness = new BetterSearchProductServiceHarness();
+            harness.Products.Add(Product(1, "Widget Deluxe"));
+            var failure = new InvalidOperationException("index is on fire");
+            harness.SearchIndexManager.Setup(x => x.IsAvailableAsync()).ThrowsAsync(failure);
+
+            var service = harness.BuildService();
+
+            await service.SearchProductsAsync(keywords: "Widget");
+
+            harness.Logger.Verify(x => x.WarningAsync(
+                It.IsAny<string>(),
+                failure,
+                It.IsAny<Customer>()), Times.Once);
         }
 
         [Test]
@@ -129,7 +150,7 @@ namespace Nop.Plugin.Misc.BetterSearch.Tests
             harness.Products.Add(Product(3, "Widget C"));
             harness.SearchIndexManager.Setup(x => x.IsAvailableAsync()).ReturnsAsync(true);
             harness.SearchIndexManager
-                .Setup(x => x.SearchAsync("Widget", harness.Settings.MaxIndexResults))
+                .Setup(x => x.SearchAsync("Widget", harness.Settings.MaxIndexResults, harness.Settings.AllowApproximateFallback))
                 .ReturnsAsync(new List<int> { 3, 1, 2 });
 
             var service = harness.BuildService();
@@ -150,7 +171,7 @@ namespace Nop.Plugin.Misc.BetterSearch.Tests
             harness.Products.Add(Product(3, "Widget C", price: 20m));
             harness.SearchIndexManager.Setup(x => x.IsAvailableAsync()).ReturnsAsync(true);
             harness.SearchIndexManager
-                .Setup(x => x.SearchAsync("Widget", harness.Settings.MaxIndexResults))
+                .Setup(x => x.SearchAsync("Widget", harness.Settings.MaxIndexResults, harness.Settings.AllowApproximateFallback))
                 .ReturnsAsync(new List<int> { 1, 2, 3 });
 
             var service = harness.BuildService();
@@ -169,7 +190,7 @@ namespace Nop.Plugin.Misc.BetterSearch.Tests
             harness.Products.Add(Product(2, "Widget B", published: false)); //unpublished since the index was last written
             harness.SearchIndexManager.Setup(x => x.IsAvailableAsync()).ReturnsAsync(true);
             harness.SearchIndexManager
-                .Setup(x => x.SearchAsync("Widget", harness.Settings.MaxIndexResults))
+                .Setup(x => x.SearchAsync("Widget", harness.Settings.MaxIndexResults, harness.Settings.AllowApproximateFallback))
                 .ReturnsAsync(new List<int> { 2, 1 });
 
             var service = harness.BuildService();
@@ -191,7 +212,7 @@ namespace Nop.Plugin.Misc.BetterSearch.Tests
             harness.Products.Add(Product(2, "Widget B", visibleIndividually: false));
             harness.SearchIndexManager.Setup(x => x.IsAvailableAsync()).ReturnsAsync(true);
             harness.SearchIndexManager
-                .Setup(x => x.SearchAsync("Widget", harness.Settings.MaxIndexResults))
+                .Setup(x => x.SearchAsync("Widget", harness.Settings.MaxIndexResults, harness.Settings.AllowApproximateFallback))
                 .ReturnsAsync(new List<int> { 1, 2 });
 
             var service = harness.BuildService();
@@ -215,7 +236,7 @@ namespace Nop.Plugin.Misc.BetterSearch.Tests
 
             harness.SearchIndexManager.Setup(x => x.IsAvailableAsync()).ReturnsAsync(true);
             harness.SearchIndexManager
-                .Setup(x => x.SearchAsync("Widget", harness.Settings.MaxIndexResults))
+                .Setup(x => x.SearchAsync("Widget", harness.Settings.MaxIndexResults, harness.Settings.AllowApproximateFallback))
                 .ReturnsAsync(new List<int> { 5, 4, 3, 2, 1 }); //index order reversed from catalogue order
 
             var service = harness.BuildService();

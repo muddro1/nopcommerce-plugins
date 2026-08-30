@@ -72,6 +72,7 @@ namespace Nop.Plugin.Misc.BetterSearch.Controllers
             {
                 Enabled = settings.Enabled,
                 MaxIndexResults = settings.MaxIndexResults,
+                AllowApproximateFallback = settings.AllowApproximateFallback,
                 ActiveStoreScopeConfiguration = storeScope,
 
                 //index status: never allowed to throw into this page - both members already
@@ -89,6 +90,7 @@ namespace Nop.Plugin.Misc.BetterSearch.Controllers
             {
                 model.Enabled_OverrideForStore = await _settingService.SettingExistsAsync(settings, x => x.Enabled, storeScope);
                 model.MaxIndexResults_OverrideForStore = await _settingService.SettingExistsAsync(settings, x => x.MaxIndexResults, storeScope);
+                model.AllowApproximateFallback_OverrideForStore = await _settingService.SettingExistsAsync(settings, x => x.AllowApproximateFallback, storeScope);
             }
 
             return model;
@@ -122,9 +124,11 @@ namespace Nop.Plugin.Misc.BetterSearch.Controllers
 
             settings.Enabled = model.Enabled;
             settings.MaxIndexResults = model.MaxIndexResults;
+            settings.AllowApproximateFallback = model.AllowApproximateFallback;
 
             await _settingService.SaveSettingOverridablePerStoreAsync(settings, x => x.Enabled, model.Enabled_OverrideForStore, storeScope, false);
             await _settingService.SaveSettingOverridablePerStoreAsync(settings, x => x.MaxIndexResults, model.MaxIndexResults_OverrideForStore, storeScope, false);
+            await _settingService.SaveSettingOverridablePerStoreAsync(settings, x => x.AllowApproximateFallback, model.AllowApproximateFallback_OverrideForStore, storeScope, false);
 
             await _settingService.ClearCacheAsync();
 

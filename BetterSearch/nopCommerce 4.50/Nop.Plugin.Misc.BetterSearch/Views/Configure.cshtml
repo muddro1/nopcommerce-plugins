@@ -38,6 +38,16 @@
                     </div>
                 </div>
                 <div class="form-group row">
+                    <div class="col-md-3">
+                        <nop-override-store-checkbox asp-for="AllowApproximateFallback_OverrideForStore" asp-input="AllowApproximateFallback" asp-store-scope="@Model.ActiveStoreScopeConfiguration" />
+                        <nop-label asp-for="AllowApproximateFallback" />
+                    </div>
+                    <div class="col-md-9">
+                        <nop-editor asp-for="AllowApproximateFallback" />
+                        <span asp-validation-for="AllowApproximateFallback"></span>
+                    </div>
+                </div>
+                <div class="form-group row">
                     <div class="col-md-9 offset-md-3">
                         <button type="submit" name="save" class="btn btn-primary">@T("Admin.Common.Save")</button>
                     </div>

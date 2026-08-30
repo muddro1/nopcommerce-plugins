@@ -14,14 +14,17 @@ namespace Nop.Plugin.Misc.BetterSearch.Services
     {
         private readonly ICategoryService _categoryService;
         private readonly IManufacturerService _manufacturerService;
+        private readonly IProductAttributeService _productAttributeService;
         private readonly IProductTagService _productTagService;
 
         public ProductIndexInputFactory(ICategoryService categoryService,
             IManufacturerService manufacturerService,
+            IProductAttributeService productAttributeService,
             IProductTagService productTagService)
         {
             _categoryService = categoryService;
             _manufacturerService = manufacturerService;
+            _productAttributeService = productAttributeService;
             _productTagService = productTagService;
         }
 
@@ -38,6 +41,13 @@ namespace Nop.Plugin.Misc.BetterSearch.Services
 
             var tags = await _productTagService.GetAllProductTagsByProductIdAsync(product.Id);
 
+            //stock nopCommerce's own search unions attribute-combination SKUs in separately
+            //(ProductService.SearchProductsAsync's ProductAttributeCombination query); this
+            //plugin's override calls base with keywords: null, so that union never runs, and a
+            //variant SKU search would silently return nothing without this. One query per
+            //product, same as every other collection loaded here.
+            var combinations = await _productAttributeService.GetAllProductAttributeCombinationsAsync(product.Id);
+
             return new ProductIndexInput
             {
                 ProductId = product.Id,
@@ -47,6 +57,10 @@ namespace Nop.Plugin.Misc.BetterSearch.Services
                 Gtin = product.Gtin,
                 ShortDescription = product.ShortDescription,
                 FullDescription = product.FullDescription,
+                CombinationSkus = combinations
+                    .Select(combination => combination.Sku)
+                    .Where(sku => !string.IsNullOrWhiteSpace(sku))
+                    .ToList(),
                 Tags = tags.Select(tag => tag.Name).ToList(),
                 Categories = categories.Select(category => category.Name).ToList(),
                 Manufacturers = manufacturers.Select(manufacturer => manufacturer.Name).ToList()

@@ -17,6 +17,7 @@ using Nop.Services.Catalog;
 using Nop.Services.Configuration;
 using Nop.Services.Customers;
 using Nop.Services.Localization;
+using Nop.Services.Logging;
 using Nop.Services.Security;
 using Nop.Services.Shipping.Date;
 using Nop.Services.Stores;
@@ -38,6 +39,7 @@ namespace Nop.Plugin.Misc.BetterSearch.Tests
         public Mock<SearchIndexManager> SearchIndexManager { get; } = new Mock<SearchIndexManager>((string)null);
         public Mock<ISettingService> SettingService { get; } = new Mock<ISettingService>();
         public Mock<IStoreContext> StoreContext { get; } = new Mock<IStoreContext>();
+        public Mock<ILogger> Logger { get; } = new Mock<ILogger>();
         public List<Product> Products { get; } = new List<Product>();
 
         public BetterSearchSettings Settings { get; set; } = new BetterSearchSettings { Enabled = true };
@@ -172,7 +174,8 @@ namespace Nop.Plugin.Misc.BetterSearch.Tests
                 new LocalizationSettings(),
                 SearchIndexManager.Object,
                 SettingService.Object,
-                StoreContext.Object);
+                StoreContext.Object,
+                Logger.Object);
         }
 
         /// <summary>

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -72,13 +73,45 @@ namespace Nop.Plugin.Misc.BetterSearch.Tests
         }
 
         [Test]
-        public async Task Falls_through_to_the_approximate_pass_and_says_so()
+        public async Task Falls_through_to_the_approximate_pass_and_says_so_when_allowed()
         {
-            //one edit from 1234; the strict pass finds nothing, the approximate pass finds it
-            var results = await _manager.SearchAsync("1235", 10);
+            //one edit from 1234; the strict pass finds nothing, the approximate pass finds it -
+            //but only because allowApproximateFallback is explicitly true here
+            var results = await _manager.SearchAsync("1235", 10, allowApproximateFallback: true);
 
             results.Should().Contain(1);
             _manager.LastSearchWasApproximate.Should().BeTrue();
+        }
+
+        [Test]
+        public async Task Strict_only_mode_never_falls_through_and_stays_unmarked()
+        {
+            //same near-miss as above, but the caller never opted into the approximate pass
+            //(the default) - a customer must never be shown a different part number than the
+            //one they typed with no indication it is a guess
+            var results = await _manager.SearchAsync("1235", 10);
+
+            results.Should().BeEmpty();
+            _manager.LastSearchWasApproximate.Should().BeFalse();
+        }
+
+        [Test]
+        public async Task Strict_only_mode_explicitly_false_behaves_the_same_as_the_default()
+        {
+            var results = await _manager.SearchAsync("1235", 10, allowApproximateFallback: false);
+
+            results.Should().BeEmpty();
+            _manager.LastSearchWasApproximate.Should().BeFalse();
+        }
+
+        [Test]
+        public async Task A_strict_hit_still_wins_even_when_the_approximate_pass_is_allowed()
+        {
+            //allowing the fallback must never contaminate a genuine strict hit
+            var results = await _manager.SearchAsync("1234", 10, allowApproximateFallback: true);
+
+            results.Should().Contain(1);
+            _manager.LastSearchWasApproximate.Should().BeFalse();
         }
 
         [Test]
@@ -164,6 +197,53 @@ namespace Nop.Plugin.Misc.BetterSearch.Tests
             {
                 File.Delete(blocked);
             }
+        }
+
+        [Test]
+        public async Task Rebuild_that_throws_mid_loop_leaves_the_previous_index_committed()
+        {
+            //CommitOnClose must be false: without it, an exception thrown after some documents
+            //have been added but before the explicit Commit() call would still commit a
+            //PARTIAL index when the `using` block disposes the writer, silently replacing a
+            //good index with a broken one
+            var productsThatThrowPartway = ThrowingProducts(Product(9, "Should never appear", "fmsa-zz-0001"));
+
+            var rebuilt = await _manager.RebuildAsync(productsThatThrowPartway);
+
+            rebuilt.Should().BeFalse();
+            //the original two-product index from SetUp must still be intact and searchable
+            (await _manager.DocumentCountAsync()).Should().Be(2);
+            (await _manager.SearchAsync("1234", 10)).Should().Contain(1);
+            (await _manager.SearchAsync("0001", 10)).Should().BeEmpty();
+        }
+
+        private static IEnumerable<ProductIndexInput> ThrowingProducts(ProductIndexInput first)
+        {
+            yield return first;
+            throw new InvalidOperationException("simulated failure partway through the rebuild");
+        }
+
+        [Test]
+        public async Task Content_checksum_is_stable_for_the_same_content()
+        {
+            var first = await _manager.ContentChecksumAsync();
+            var second = await _manager.ContentChecksumAsync();
+
+            first.Should().NotBeNullOrEmpty();
+            first.Should().Be(second);
+        }
+
+        [Test]
+        public async Task Content_checksum_changes_when_a_products_name_changes_even_though_the_count_does_not()
+        {
+            var before = await _manager.ContentChecksumAsync();
+
+            //same product id and SKU, different name - document count is unchanged
+            await _manager.UpsertAsync(Product(1, "Flange assembly RENAMED", "fmsa-ab-1234"));
+
+            var after = await _manager.ContentChecksumAsync();
+
+            after.Should().NotBe(before);
         }
 
     }

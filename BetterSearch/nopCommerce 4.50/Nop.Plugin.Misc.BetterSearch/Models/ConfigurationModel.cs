@@ -15,6 +15,10 @@ namespace Nop.Plugin.Misc.BetterSearch.Models
         public int MaxIndexResults { get; set; }
         public bool MaxIndexResults_OverrideForStore { get; set; }
 
+        [NopResourceDisplayName("Plugins.Misc.BetterSearch.Fields.AllowApproximateFallback")]
+        public bool AllowApproximateFallback { get; set; }
+        public bool AllowApproximateFallback_OverrideForStore { get; set; }
+
         #region Index status (read-only, not posted back)
 
         [NopResourceDisplayName("Plugins.Misc.BetterSearch.IndexStatus.DocumentCount")]

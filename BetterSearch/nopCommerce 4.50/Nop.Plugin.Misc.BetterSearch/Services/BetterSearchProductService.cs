@@ -16,6 +16,7 @@ using Nop.Services.Catalog;
 using Nop.Services.Configuration;
 using Nop.Services.Customers;
 using Nop.Services.Localization;
+using Nop.Services.Logging;
 using Nop.Services.Security;
 using Nop.Services.Shipping.Date;
 using Nop.Services.Stores;
@@ -49,6 +50,7 @@ namespace Nop.Plugin.Misc.BetterSearch.Services
         private readonly SearchIndexManager _searchIndexManager;
         private readonly ISettingService _settingService;
         private readonly IStoreContext _storeContext;
+        private readonly ILogger _logger;
 
         #endregion
 
@@ -90,7 +92,8 @@ namespace Nop.Plugin.Misc.BetterSearch.Services
             LocalizationSettings localizationSettings,
             SearchIndexManager searchIndexManager,
             ISettingService settingService,
-            IStoreContext storeContext)
+            IStoreContext storeContext,
+            ILogger logger)
             : base(catalogSettings, commonSettings, aclService, customerService, dateRangeService,
                 languageService, localizationService, productAttributeParser, productAttributeService,
                 crossSellProductRepository, discountProductMappingRepository, localizedPropertyRepository,
@@ -105,6 +108,7 @@ namespace Nop.Plugin.Misc.BetterSearch.Services
             _searchIndexManager = searchIndexManager;
             _settingService = settingService;
             _storeContext = storeContext;
+            _logger = logger;
         }
 
         #endregion
@@ -164,11 +168,26 @@ namespace Nop.Plugin.Misc.BetterSearch.Services
                 if (!await _searchIndexManager.IsAvailableAsync())
                     return await DelegateToBase();
 
-                indexIds = await _searchIndexManager.SearchAsync(keywords, Math.Max(1, settings.MaxIndexResults));
+                indexIds = await _searchIndexManager.SearchAsync(keywords, Math.Max(1, settings.MaxIndexResults),
+                    settings.AllowApproximateFallback);
             }
-            catch
+            catch (Exception exception)
             {
-                //rule 4: an index failure must never reach a page render
+                //rule 4: an index failure must never reach a page render - but a locked,
+                //corrupt or deleted index degrading every storefront search to stock behaviour
+                //with zero signal is exactly the "search got worse, nobody knows why" scenario
+                //this warning exists to prevent
+                try
+                {
+                    await _logger.WarningAsync(
+                        "BetterSearch: the search index is unavailable or failed; falling back to stock search.",
+                        exception);
+                }
+                catch
+                {
+                    //logging must not throw into a page render either
+                }
+
                 return await DelegateToBase();
             }
 

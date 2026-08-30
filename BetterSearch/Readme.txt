@@ -6,10 +6,30 @@ Replaces nopCommerce's product search with a relevance-ranked index, built
 with Lucene.NET, that matches SKUs by substring and tolerates typos in
 product names and descriptions. It is a drop-in replacement: no template
 changes, no new search page. The storefront search box, the autocomplete
-dropdown and the admin product list all keep working exactly as before -
-they just return better results.
+dropdown and the admin product list all keep using the same input box and
+the same result list - only what gets matched and how it is ranked
+changes.
 
   System name: Misc.BetterSearch
+
+
+Where results get better, and one place they get worse
+-----------------------------------------------------------
+Multi-word queries, typo tolerance and SKU substring matching are all much
+better than stock. Stock nopCommerce matches a product name with a plain
+substring test (Name.Contains(keywords)); this plugin matches whole
+analysed tokens plus length-scaled fuzziness instead. That is a strict
+upgrade for a whole word, misspelled or not - but it means a PARTIAL word
+typed as a prefix of a product name can stop matching. "hydraul" no longer
+finds "Hydraulic Flange Assembly": matching it against "hydraulic" needs
+two edits, and at seven characters this plugin allows only one. Stock's
+raw substring test had no such limit.
+
+This is most noticeable in the autocomplete dropdown, which fires on every
+keystroke and so spends most of its life showing partial words. It does
+not affect identifiers: SKUs and manufacturer part numbers are indexed as
+n-grams specifically so a partial fragment like "234" keeps matching
+"fmsa-ab-1234" the same way it always did.
 
 
 REQUIRED SETTING - read this before anything else
@@ -222,12 +242,37 @@ nopCommerce 4.50 source tree:
      src/Presentation/Nop.Web/Plugins/Misc.BetterSearch.
   4. Deploy that folder as described under "Installing" above.
 
-This plugin's output is larger than a typical plugin's: alongside its own
-assembly, it carries Lucene.NET and Lucene's own dependencies (J2N.dll
-among them). Every one of those files is required - the plugin will not
-load without all of them - so unlike a plugin that ships a fixed, short
-file list, deploy whatever the build produces, minus the Nop.Web.* host
-files described below.
+The build directory ends up holding far more than the plugin needs to
+deploy. DO NOT ship everything the build produces - deploy exactly this
+allow-list, ten files:
+
+  - Nop.Plugin.Misc.BetterSearch.dll
+  - Nop.Plugin.Misc.BetterSearch.deps.json
+  - Nop.Plugin.Misc.BetterSearch.pdb
+  - plugin.json
+  - logo.jpg
+  - Views\_ViewImports.cshtml
+  - Views\Configure.cshtml
+  - Lucene.Net.dll
+  - Lucene.Net.Analysis.Common.dll
+  - J2N.dll
+
+Everything else the build emits belongs to nopCommerce itself, is already
+present on the server, and must NOT be copied into the plugin folder.
+That includes the entire "runtimes\" tree the build produces (SkiaSharp,
+SqlClient's native SNI library, System.Drawing - roughly 65MB on its own):
+none of it is a dependency of this plugin, all of it ships with
+nopCommerce already, and copying it in triples the deploy size for
+nothing. It also includes the Nop.Web.* host files a newer SDK tends to
+copy into the plugin output - Nop.Web, Nop.Web.deps.json,
+Nop.Web.runtimeconfig.json, Nop.Web.staticwebassets.* - and any other
+Nop.*.dll or Microsoft.*.dll that isn't in the list above; those are
+nopCommerce's own assemblies, loaded already, and the bare "Nop.Web" file
+in particular is a compiled host executable, not a plugin file.
+
+The shipped "Misc.BetterSearch" directory in this repository is exactly
+this allow-list and nothing else - use it as the reference for what a
+correct build output looks like.
 
 Notes if you are not building with the .NET 6 SDK:
 
@@ -236,14 +281,10 @@ Notes if you are not building with the .NET 6 SDK:
   - The post-build helper (src/Build/ClearPluginAssemblies.dll) is a net6.0
     app and needs the .NET 6 runtime. Without it, set
     DOTNET_ROLL_FORWARD=Major before running dotnet build.
-  - A newer SDK also copies some Nop.Web host files (Nop.Web,
-    Nop.Web.deps.json, Nop.Web.runtimeconfig.json,
-    Nop.Web.staticwebassets.*) into the plugin output that the post-build
-    helper does not clean up. Delete them; the plugin folder should
-    contain only the files listed in the shipped "Misc.BetterSearch"
-    directory - everything the build produced, except those Nop.Web.*
-    files. The bare "Nop.Web" file in particular is a compiled host
-    executable, not a plugin file, and must never ship.
+  - A newer SDK is also more likely to emit the "runtimes\" tree and the
+    Nop.Web.* host files called out above. Neither is cleaned up
+    automatically regardless of SDK version - always apply the allow-list
+    by hand before deploying.
 
 
 Running the tests

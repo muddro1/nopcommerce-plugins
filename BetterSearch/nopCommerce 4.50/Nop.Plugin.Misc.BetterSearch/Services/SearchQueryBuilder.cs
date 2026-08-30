@@ -39,10 +39,12 @@ namespace Nop.Plugin.Misc.BetterSearch.Services
             if (!terms.Any())
                 return outer;
 
-            //the whole query as typed, against the raw identifier fields
+            //the whole query as typed, against the raw identifier fields. GTIN uses "raw" (the
+            //trimmed, lowercased form) rather than the untouched queryText - case is never
+            //significant on any field, GTIN included, and an ISBN-10 can end in "X".
             AddTerm(outer, BetterSearchDefaults.FIELD_SKU_RAW, raw, BOOST_IDENTIFIER_RAW);
             AddTerm(outer, BetterSearchDefaults.FIELD_MPN_RAW, raw, BOOST_IDENTIFIER_RAW);
-            AddTerm(outer, BetterSearchDefaults.FIELD_GTIN, queryText.Trim(), BOOST_GTIN);
+            AddTerm(outer, BetterSearchDefaults.FIELD_GTIN, raw, BOOST_GTIN);
 
             //the whole query with all separators (including whitespace) stripped, so
             //"ab1234" matches "ab-1234"
