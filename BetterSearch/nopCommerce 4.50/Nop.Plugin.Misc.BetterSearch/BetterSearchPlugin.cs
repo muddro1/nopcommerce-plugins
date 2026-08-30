@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Nop.Core;
 using Nop.Core.Domain.ScheduleTasks;
 using Nop.Core.Infrastructure;
 using Nop.Services.Configuration;
@@ -23,6 +24,7 @@ namespace Nop.Plugin.Misc.BetterSearch
         private readonly INopFileProvider _fileProvider;
         private readonly IScheduleTaskService _scheduleTaskService;
         private readonly ISettingService _settingService;
+        private readonly IWebHelper _webHelper;
 
         #endregion
 
@@ -31,17 +33,27 @@ namespace Nop.Plugin.Misc.BetterSearch
         public BetterSearchPlugin(ILocalizationService localizationService,
             INopFileProvider fileProvider,
             IScheduleTaskService scheduleTaskService,
-            ISettingService settingService)
+            ISettingService settingService,
+            IWebHelper webHelper)
         {
             _localizationService = localizationService;
             _fileProvider = fileProvider;
             _scheduleTaskService = scheduleTaskService;
             _settingService = settingService;
+            _webHelper = webHelper;
         }
 
         #endregion
 
         #region Methods
+
+        /// <summary>
+        /// Route matches the controller name/action below: <c>MiscBetterSearchController.Configure</c>.
+        /// </summary>
+        public override string GetConfigurationPageUrl()
+        {
+            return $"{_webHelper.GetStoreLocation()}Admin/MiscBetterSearch/Configure";
+        }
 
         public override async Task InstallAsync()
         {
@@ -106,7 +118,13 @@ namespace Nop.Plugin.Misc.BetterSearch
                 ["Plugins.Misc.BetterSearch.Fields.Enabled.Hint"] = "Use the Lucene-backed index for storefront product search. Leave off until the index has been built at least once.",
                 ["Plugins.Misc.BetterSearch.Fields.MaxIndexResults"] = "Maximum index results",
                 ["Plugins.Misc.BetterSearch.Fields.MaxIndexResults.Hint"] = "The maximum number of product ids taken from the index before nopCommerce applies its own filters.",
-                ["Plugins.Misc.BetterSearch.Configuration.Saved"] = "The settings have been saved."
+                ["Plugins.Misc.BetterSearch.Configuration.Saved"] = "The settings have been saved.",
+                ["Plugins.Misc.BetterSearch.IndexStatus.Title"] = "Index status",
+                ["Plugins.Misc.BetterSearch.IndexStatus.DocumentCount"] = "Documents in index",
+                ["Plugins.Misc.BetterSearch.IndexStatus.Available"] = "Index available",
+                ["Plugins.Misc.BetterSearch.IndexStatus.RebuildNow"] = "Rebuild now",
+                ["Plugins.Misc.BetterSearch.IndexStatus.RebuildNow.Success"] = "The search index has been rebuilt. {0} product(s) are now indexed.",
+                ["Plugins.Misc.BetterSearch.MinimumSearchTermWarning"] = "The store's minimum search term length is currently {0} characters. nopCommerce rejects any search term shorter than this in CatalogModelFactory before Better Search is ever consulted, so this plugin cannot see - let alone fix - a query that never reaches it. The store's SKU pattern (for example fmsa-xx-xxxx) has a two-character middle segment that staff regularly search by, so set Minimum search term length to 2 under Configuration > Settings > Catalog settings."
             });
         }
 
