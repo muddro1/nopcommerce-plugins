@@ -77,9 +77,14 @@ Two settings, in two different places.
 **Configuration → Settings → Catalog settings:**
 - tick **"Show product images in search auto complete"** (off by default)
 
-**Configuration → Settings → Media settings:**
-- **"Auto complete search thumb picture size"** — the default is **20 pixels**,
-  which is too small to recognise anything. Try **40**, look at it, adjust.
+**Configuration → Settings → All settings** (NOT the Media settings page —
+nopCommerce deliberately leaves this one off that screen, so it only exists on
+the raw settings list):
+- search for `mediasettings.autocompletesearchthumbpicturesize`
+- the default is **20 pixels**, too small to recognise anything. Try **40**,
+  look at it, adjust.
+- if no such row exists, click **Add new** and create it with that exact name
+  and a value of `40`.
 
 These are nopCommerce's own settings, not the plugin's. The plugin returns real
 product records, so the image pipeline works exactly as it does without it.

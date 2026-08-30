@@ -143,10 +143,15 @@ Two settings, in two different places:
   Configuration > Settings > Catalog settings
       "Show product images in search auto complete" - off by default.
 
-  Configuration > Settings > Media settings
-      "Auto complete search thumb picture size" - defaults to 20 pixels,
-      which is too small to recognise a product. 40 is a more useful
-      starting point; adjust it against your own photography.
+  Configuration > Settings > All settings
+      mediasettings.autocompletesearchthumbpicturesize - defaults to 20
+      pixels, which is too small to recognise a product. 40 is a more
+      useful starting point; adjust it against your own photography.
+
+      This one is NOT on the Media settings page. nopCommerce maps it out
+      of that screen deliberately (AdminMapperConfiguration ignores it),
+      so the All settings list is the only place to edit it. If the row is
+      absent, use "Add new" with that exact setting name.
 
 Products without a picture fall back to the store's default image, so the
 dropdown stays aligned rather than showing gaps.
