@@ -18,9 +18,17 @@ namespace Nop.Plugin.Misc.BetterSearch.Tests
     [TestFixture]
     public class BetterSearchProductServiceTests
     {
-        private static Product Product(int id, string name, decimal price = 0m, bool published = true)
+        private static Product Product(int id, string name, decimal price = 0m, bool published = true,
+            bool visibleIndividually = true)
         {
-            return new Product { Id = id, Name = name, Price = price, Published = published };
+            return new Product
+            {
+                Id = id,
+                Name = name,
+                Price = price,
+                Published = published,
+                VisibleIndividually = visibleIndividually
+            };
         }
 
         [Test]
@@ -169,6 +177,54 @@ namespace Nop.Plugin.Misc.BetterSearch.Tests
             var result = await service.SearchProductsAsync(keywords: "Widget");
 
             result.Select(p => p.Id).Should().Equal(1);
+        }
+
+        [Test]
+        public async Task A_real_base_predicate_is_forwarded_on_the_index_path()
+        {
+            //I-1: the base call inside the index path (line 179) must forward every argument the
+            //caller passed in, not just the ones the earlier tests happen to exercise via the
+            //delegate path. visibleIndividuallyOnly is a predicate no other test in this file
+            //pins on the index path - dropping it from that call would let product 2 through.
+            var harness = new BetterSearchProductServiceHarness();
+            harness.Products.Add(Product(1, "Widget A", visibleIndividually: true));
+            harness.Products.Add(Product(2, "Widget B", visibleIndividually: false));
+            harness.SearchIndexManager.Setup(x => x.IsAvailableAsync()).ReturnsAsync(true);
+            harness.SearchIndexManager
+                .Setup(x => x.SearchAsync("Widget", harness.Settings.MaxIndexResults))
+                .ReturnsAsync(new List<int> { 1, 2 });
+
+            var service = harness.BuildService();
+
+            var result = await service.SearchProductsAsync(keywords: "Widget", visibleIndividuallyOnly: true);
+
+            result.Select(p => p.Id).Should().Equal(1);
+        }
+
+        [Test]
+        public async Task Paging_is_applied_after_the_merge_not_forwarded_into_the_base_call()
+        {
+            //I-2: the base call inside the index path must always request the WHOLE filtered set
+            //(page 0, unbounded), then the override slices pageIndex/pageSize itself after the
+            //merge. If the caller's own pageIndex/pageSize were forwarded into that base call
+            //instead, the base query would page the unfiltered set first and the merge would
+            //then intersect against too few rows - short pages, and a wrong TotalCount.
+            var harness = new BetterSearchProductServiceHarness();
+            for (var id = 1; id <= 5; id++)
+                harness.Products.Add(Product(id, $"Widget {id}"));
+
+            harness.SearchIndexManager.Setup(x => x.IsAvailableAsync()).ReturnsAsync(true);
+            harness.SearchIndexManager
+                .Setup(x => x.SearchAsync("Widget", harness.Settings.MaxIndexResults))
+                .ReturnsAsync(new List<int> { 5, 4, 3, 2, 1 }); //index order reversed from catalogue order
+
+            var service = harness.BuildService();
+
+            var result = await service.SearchProductsAsync(keywords: "Widget", pageIndex: 1, pageSize: 2);
+
+            //index order is 5,4,3,2,1 - page 1 (0-based) of size 2 is the third and fourth entries
+            result.Select(p => p.Id).Should().Equal(3, 2);
+            result.TotalCount.Should().Be(5);
         }
     }
 }

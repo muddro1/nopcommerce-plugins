@@ -164,7 +164,7 @@ namespace Nop.Plugin.Misc.BetterSearch.Services
                 if (!await _searchIndexManager.IsAvailableAsync())
                     return await DelegateToBase();
 
-                indexIds = await _searchIndexManager.SearchAsync(keywords, settings.MaxIndexResults);
+                indexIds = await _searchIndexManager.SearchAsync(keywords, Math.Max(1, settings.MaxIndexResults));
             }
             catch
             {
@@ -182,15 +182,23 @@ namespace Nop.Plugin.Misc.BetterSearch.Services
                 productTagId, null, searchDescriptions, searchManufacturerPartNumber, searchSku,
                 searchProductTags, languageId, filteredSpecOptions, orderBy, showHidden, overridePublished);
 
-            var indexIdSet = new HashSet<int>(indexIds);
+            //real Lucene will not produce duplicate ids, but an index anomaly must never reach a
+            //page render (rule 4's point, extended to malformed results as well as thrown ones) -
+            //Distinct() plus a duplicate-tolerant map keeps a repeated id from throwing or from
+            //emitting the same product twice
+            var distinctIndexIds = indexIds.Distinct().ToList();
+            var indexIdSet = new HashSet<int>(distinctIndexIds);
 
             List<Product> result;
 
             if (orderBy == ProductSortingEnum.Position)
             {
                 //rule 5: re-sort the survivors into index order - the index ranks, base only filters
-                var byId = filtered.Where(p => indexIdSet.Contains(p.Id)).ToDictionary(p => p.Id);
-                result = indexIds.Where(byId.ContainsKey).Select(id => byId[id]).ToList();
+                var byId = new Dictionary<int, Product>();
+                foreach (var product in filtered.Where(p => indexIdSet.Contains(p.Id)))
+                    byId[product.Id] = product;
+
+                result = distinctIndexIds.Where(byId.ContainsKey).Select(id => byId[id]).ToList();
             }
             else
             {
