@@ -94,7 +94,7 @@ namespace Nop.Plugin.Misc.BetterSearch.Services
         }
 
         /// <summary>Writes a fresh index from scratch, replacing whatever was there before.</summary>
-        public virtual Task RebuildAsync(IEnumerable<ProductIndexInput> products)
+        public virtual Task<bool> RebuildAsync(IEnumerable<ProductIndexInput> products)
         {
             try
             {
@@ -120,10 +120,13 @@ namespace Nop.Plugin.Misc.BetterSearch.Services
             }
             catch
             {
-                //a failed rebuild leaves no usable index; IsAvailableAsync/SearchAsync degrade safely
+                //Still never throws: an index fault must not reach a shopper's page render.
+                //But the caller is told, because an explicit admin rebuild that silently
+                //"succeeds" having done nothing is worse than an error.
+                return Task.FromResult(false);
             }
 
-            return Task.CompletedTask;
+            return Task.FromResult(true);
         }
 
         /// <summary>Adds or replaces a single product's document, keyed on its product id.</summary>

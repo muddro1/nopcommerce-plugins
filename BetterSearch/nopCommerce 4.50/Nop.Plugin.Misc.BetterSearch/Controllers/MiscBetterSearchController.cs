@@ -157,9 +157,29 @@ namespace Nop.Plugin.Misc.BetterSearch.Controllers
             foreach (var product in products)
                 inputs.Add(await _productIndexInputFactory.BuildAsync(product));
 
-            await _searchIndexManager.RebuildAsync(inputs);
+            var rebuilt = await _searchIndexManager.RebuildAsync(inputs);
+            if (!rebuilt)
+            {
+                //the index manager never throws, so without this the admin would be shown a
+                //success message for a rebuild that did nothing - and the document count it
+                //quoted could be the stale pre-rebuild figure, making it look convincing
+                _notificationService.ErrorNotification(
+                    await _localizationService.GetResourceAsync("Plugins.Misc.BetterSearch.IndexStatus.RebuildNow.Failed"));
+
+                return await Configure();
+            }
 
             var documentCount = await _searchIndexManager.DocumentCountAsync();
+
+            if (documentCount != inputs.Count)
+            {
+                //rebuild reported success but the index does not hold what we gave it
+                _notificationService.WarningNotification(string.Format(
+                    await _localizationService.GetResourceAsync("Plugins.Misc.BetterSearch.IndexStatus.RebuildNow.CountMismatch"),
+                    inputs.Count, documentCount));
+
+                return await Configure();
+            }
 
             _notificationService.SuccessNotification(string.Format(
                 await _localizationService.GetResourceAsync("Plugins.Misc.BetterSearch.IndexStatus.RebuildNow.Success"),

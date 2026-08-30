@@ -60,7 +60,14 @@ namespace Nop.Plugin.Misc.BetterSearch.Tasks
             foreach (var product in products)
                 inputs.Add(await _productIndexInputFactory.BuildAsync(product));
 
-            await _searchIndexManager.RebuildAsync(inputs);
+            var rebuilt = await _searchIndexManager.RebuildAsync(inputs);
+            if (!rebuilt)
+            {
+                //comparing counts after a failed rebuild would produce a meaningless drift
+                //report, so say what actually happened and stop
+                await _logger.WarningAsync("BetterSearch: the scheduled index rebuild failed; the drift check was skipped.");
+                return;
+            }
 
             var rebuiltCount = await _searchIndexManager.DocumentCountAsync();
 

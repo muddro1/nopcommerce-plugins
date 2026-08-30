@@ -134,5 +134,37 @@ namespace Nop.Plugin.Misc.BetterSearch.Tests
             (await missing.SearchAsync("anything", 10)).Should().BeEmpty();
             missing.Dispose();
         }
+
+        [Test]
+        public async Task Rebuild_reports_success()
+        {
+            //an explicit admin rebuild must be able to tell the caller it worked, unlike the
+            //search path where faults are swallowed so a shopper's page still renders
+            var rebuilt = await _manager.RebuildAsync(new[] { Product(9, "Only survivor", "fmsa-zz-0001") });
+
+            rebuilt.Should().BeTrue();
+        }
+
+        [Test]
+        public async Task Rebuild_over_an_unusable_path_reports_failure_rather_than_throwing()
+        {
+            //a file where the index directory should be makes CreateDirectory fail
+            var blocked = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+            await File.WriteAllTextAsync(blocked, "not a directory");
+
+            try
+            {
+                using var manager = new SearchIndexManager(blocked);
+
+                var rebuilt = await manager.RebuildAsync(new[] { Product(1, "Anything", "fmsa-aa-0001") });
+
+                rebuilt.Should().BeFalse();
+            }
+            finally
+            {
+                File.Delete(blocked);
+            }
+        }
+
     }
 }

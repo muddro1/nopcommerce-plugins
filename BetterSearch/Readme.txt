@@ -88,11 +88,17 @@ Configure.
       touches search results until you turn it on. While off, every search
       goes through nopCommerce's stock behaviour, unchanged.
 
-      This switch is GLOBAL, not per store. The search index behind it is
-      a single artefact - one set of files under App_Data, shared by
-      however many stores this installation runs - so there is no
-      meaningful way to have it "on" for one store and "off" for another;
-      turning it off stops the plugin from being consulted anywhere.
+      This setting can be overridden per store, and doing so controls
+      whether that store's searches are served from the index.
+
+      What is NOT per store is the index itself. There is one index - a
+      single set of files under App_Data - shared by every store this
+      installation runs. Index maintenance follows the global setting
+      rather than any per-store override, so the index stays complete and
+      current no matter which stores are currently using it. Store
+      filtering of results is done by nopCommerce's own query at search
+      time, never by the index, so a store can never see another store's
+      products through this plugin.
 
   Maximum index results
       An internal cap on how many candidate ids the index hands back before

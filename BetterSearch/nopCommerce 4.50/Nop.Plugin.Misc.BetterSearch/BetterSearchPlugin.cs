@@ -124,6 +124,8 @@ namespace Nop.Plugin.Misc.BetterSearch
                 ["Plugins.Misc.BetterSearch.IndexStatus.Available"] = "Index available",
                 ["Plugins.Misc.BetterSearch.IndexStatus.RebuildNow"] = "Rebuild now",
                 ["Plugins.Misc.BetterSearch.IndexStatus.RebuildNow.Success"] = "The search index has been rebuilt. {0} product(s) are now indexed.",
+                ["Plugins.Misc.BetterSearch.IndexStatus.RebuildNow.Failed"] = "The search index could not be rebuilt. The previous index is unchanged and search continues to work; check the system log for the underlying error.",
+                ["Plugins.Misc.BetterSearch.IndexStatus.RebuildNow.CountMismatch"] = "The rebuild finished but the index holds {1} document(s) for {0} product(s). Check the system log, then rebuild again.",
                 ["Plugins.Misc.BetterSearch.MinimumSearchTermWarning"] = "The store's minimum search term length is currently {0} characters. nopCommerce rejects any search term shorter than this in CatalogModelFactory before Better Search is ever consulted, so this plugin cannot see - let alone fix - a query that never reaches it. The store's SKU pattern (for example fmsa-xx-xxxx) has a two-character middle segment that staff regularly search by, so set Minimum search term length to 2 under Configuration > Settings > Catalog settings."
             });
         }
