@@ -29,6 +29,13 @@ namespace Nop.Plugin.Misc.BetterSearch.Infrastructure
             });
 
             services.AddScoped<IProductService, BetterSearchProductService>();
+
+            //not auto-discovered like the event consumers: ProductIndexEventConsumer and
+            //RebuildSearchIndexTask are both resolved by nopCommerce's own container (the
+            //latter via ResolveUnregistered, since schedule tasks are looked up by type name),
+            //and that resolution fails for a constructor parameter the container has never
+            //heard of
+            services.AddScoped<ProductIndexInputFactory>();
         }
 
         public void Configure(IApplicationBuilder application)
