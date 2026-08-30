@@ -1,0 +1,11 @@
+{
+  "Group": "Misc",
+  "FriendlyName": "Better product search",
+  "SystemName": "Misc.BetterSearch",
+  "Version": "1.00",
+  "SupportedVersions": [ "4.50" ],
+  "Author": "Zach Malamud",
+  "DisplayOrder": 1,
+  "FileName": "Nop.Plugin.Misc.BetterSearch.dll",
+  "Description": "Replaces product search with a relevance-ranked index that matches SKUs by substring and tolerates typos in product names and descriptions."
+}

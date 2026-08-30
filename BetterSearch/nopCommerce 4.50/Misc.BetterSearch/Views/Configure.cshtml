@@ -1,0 +1,81 @@
+@model Nop.Plugin.Misc.BetterSearch.Models.ConfigurationModel
+
+@{
+    Layout = "_ConfigurePlugin";
+}
+
+@await Component.InvokeAsync("StoreScopeConfiguration")
+
+@if (Model.ShowMinimumSearchTermWarning)
+{
+    <div class="alert alert-warning">
+        @string.Format(T("Plugins.Misc.BetterSearch.MinimumSearchTermWarning").Text, Model.ProductSearchTermMinimumLength)
+    </div>
+}
+
+<form asp-controller="MiscBetterSearch" asp-action="Configure" method="post">
+    <div class="cards-group">
+        <div class="card card-default">
+            <div class="card-body">
+                <div class="form-group row">
+                    <div class="col-md-3">
+                        <nop-override-store-checkbox asp-for="Enabled_OverrideForStore" asp-input="Enabled" asp-store-scope="@Model.ActiveStoreScopeConfiguration" />
+                        <nop-label asp-for="Enabled" />
+                    </div>
+                    <div class="col-md-9">
+                        <nop-editor asp-for="Enabled" />
+                        <span asp-validation-for="Enabled"></span>
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <div class="col-md-3">
+                        <nop-override-store-checkbox asp-for="MaxIndexResults_OverrideForStore" asp-input="MaxIndexResults" asp-store-scope="@Model.ActiveStoreScopeConfiguration" />
+                        <nop-label asp-for="MaxIndexResults" />
+                    </div>
+                    <div class="col-md-9">
+                        <nop-editor asp-for="MaxIndexResults" />
+                        <span asp-validation-for="MaxIndexResults"></span>
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <div class="col-md-9 offset-md-3">
+                        <button type="submit" name="save" class="btn btn-primary">@T("Admin.Common.Save")</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<div class="cards-group">
+    <div class="card card-default">
+        <div class="card-header">
+            @T("Plugins.Misc.BetterSearch.IndexStatus.Title")
+        </div>
+        <div class="card-body">
+            <div class="form-group row">
+                <div class="col-md-3">
+                    <nop-label asp-for="DocumentCount" />
+                </div>
+                <div class="col-md-9">
+                    <div class="form-text-row">@Model.DocumentCount</div>
+                </div>
+            </div>
+            <div class="form-group row">
+                <div class="col-md-3">
+                    <nop-label asp-for="IndexAvailable" />
+                </div>
+                <div class="col-md-9">
+                    <div class="form-text-row">@T(Model.IndexAvailable ? "Admin.Common.Yes" : "Admin.Common.No")</div>
+                </div>
+            </div>
+            <div class="form-group row">
+                <div class="col-md-9 offset-md-3">
+                    <form asp-controller="MiscBetterSearch" asp-action="RebuildIndex" method="post">
+                        <button type="submit" name="rebuild" class="btn btn-secondary">@T("Plugins.Misc.BetterSearch.IndexStatus.RebuildNow")</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
