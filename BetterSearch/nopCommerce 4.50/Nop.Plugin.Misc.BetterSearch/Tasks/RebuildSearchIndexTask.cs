@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Nop.Plugin.Misc.BetterSearch.Services;
 using Nop.Services.Catalog;
@@ -59,9 +60,10 @@ namespace Nop.Plugin.Misc.BetterSearch.Tasks
             //the index.
             var products = await _productService.SearchProductsAsync(showHidden: true);
 
-            var inputs = new List<ProductIndexInput>(products.Count);
-            foreach (var product in products)
-                inputs.Add(await _productIndexInputFactory.BuildAsync(product));
+            //one batch call, not one set of queries per product: a per-product build
+            //made this loop six round trips per product, which is a standing load on
+            //the scheduled path and long enough to time out the admin's Rebuild button
+            var inputs = await _productIndexInputFactory.BuildManyAsync(products.ToList());
 
             var rebuilt = await _searchIndexManager.RebuildAsync(inputs);
             if (!rebuilt)
