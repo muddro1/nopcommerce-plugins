@@ -76,6 +76,17 @@ BetterSearch and HandlingFee carry NUnit suites under `Tests/`, roughly 120 case
 
 Both plugins also ship a `TESTING.md` with a manual script for a real store: SQL to verify stored order columns, expected figures per scenario and the settings to toggle between parts.
 
-## Credits and licensing
+## Licensing
 
-BetterSearch and HandlingFee are original work. HasOnlyProducts derives from the nopCommerce team's [HasAllProducts discount requirement plugin](https://github.com/nopSolutions/HasAllProducts-discount-requiremement-plugin-for-nopcommerce) and carries that project's licensing. The repository has no top-level `LICENSE` file yet.
+Everything here is licensed under the **GNU General Public License v3**. The full text is in [LICENSE.md](LICENSE.md).
+
+That is inherited, not chosen. nopCommerce ships under the nopCommerce Public License v4.0, which is AGPL v3 plus a requirement that "powered by nopCommerce" appear on every user interface screen. These plugins compile against and subclass nopCommerce types, and `HandlingFeeOrderTotalCalculationService` reproduces a method body from `Nop.Services.Orders.OrderTotalCalculationService` outright, so they are derivative works rather than independent programs. Running them on a public store also brings AGPL §13 and the "powered by nopCommerce" attribution into play, which is a matter for the store rather than this repository.
+
+**Customer has only these products in the cart**
+Copyright © Nop Solutions, Ltd, as the original "Customer has all of these products in the cart" plugin ([source](https://github.com/nopSolutions/HasAllProducts-discount-requiremement-plugin-for-nopcommerce), GPL v3, upstream version 1.36).
+Modified by Zach Malamud starting 2026-08-29: added the exclusive-cart and match-any conditions, renamed the system name, settings keys, controller and locale resources.
+
+**Better product search** and **Handling fee for small orders**
+Copyright © 2026 Zach Malamud. Original work, released under GPL v3 as derivative works of nopCommerce.
+
+BetterSearch bundles Lucene.NET and J2N, both under the Apache License 2.0.

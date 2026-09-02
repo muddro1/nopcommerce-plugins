@@ -21,6 +21,14 @@ Upstream it was forked from
   Version:  1.36, the nopCommerce 4.50 build from the marketplace package
   Source:   https://github.com/nopSolutions/HasAllProducts-discount-requiremement-plugin-for-nopcommerce
   Listing:  https://www.nopcommerce.com/has-all-products-discount-requirement-rule
+  License:  GNU General Public License v3
+
+Copyright (c) Nop Solutions, Ltd. Modified by Zach Malamud starting 2026-08-29:
+added the "nothing else in the cart" and "any one of these is enough"
+conditions, and renamed the system name, settings keys, controller and locale
+resources so this plugin installs alongside the original. This modified version
+is distributed under the GNU General Public License v3, the same terms as the
+original; see LICENSE.md at the root of this repository.
 
 The marketplace package used to be vendored in this repo under
 18541_1030_HasAllProducts/. It was removed - it was unmodified third-party code,
