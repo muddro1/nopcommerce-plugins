@@ -36,7 +36,7 @@ publicly available at the URL above, and it carried ten nopCommerce versions
 (3.90 to 4.90) that this fork never used. To read the exact files this fork
 started from:
 
-  git show 9ad8d70:"18541_1030_HasAllProducts/HasAllProducts/nopCommerce 4.50/Nop.Plugin.DiscountRules.HasAllProducts/HasAllProductsDiscountRequirementRule.cs"
+  git show 145a390:"18541_1030_HasAllProducts/HasAllProducts/nopCommerce 4.50/Nop.Plugin.DiscountRules.HasAllProducts/HasAllProductsDiscountRequirementRule.cs"
 
 
 Configuration
