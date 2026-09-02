@@ -14,6 +14,22 @@ use different system names, settings keys, controllers and locale resources.
   Original: DiscountRequirement.HasAllProducts
   This one: DiscountRequirement.HasOnlyProducts
 
+Upstream it was forked from
+---------------------------
+  Plugin:   "Customer has all of these products in the cart" (DiscountRequirement.HasAllProducts)
+  Author:   nopCommerce team, Nop Solutions, Ltd
+  Version:  1.36, the nopCommerce 4.50 build from the marketplace package
+  Source:   https://github.com/nopSolutions/HasAllProducts-discount-requiremement-plugin-for-nopcommerce
+  Listing:  https://www.nopcommerce.com/has-all-products-discount-requirement-rule
+
+The marketplace package used to be vendored in this repo under
+18541_1030_HasAllProducts/. It was removed - it was unmodified third-party code,
+publicly available at the URL above, and it carried ten nopCommerce versions
+(3.90 to 4.90) that this fork never used. To read the exact files this fork
+started from:
+
+  git show 9ad8d70:"18541_1030_HasAllProducts/HasAllProducts/nopCommerce 4.50/Nop.Plugin.DiscountRules.HasAllProducts/HasAllProductsDiscountRequirementRule.cs"
+
 
 Configuration
 -------------
