@@ -40,18 +40,19 @@ BetterSearch/
 │   ├── Nop.Plugin.Misc.BetterSearch/   ← source project
 │   └── Misc.BetterSearch/              ← compiled, drop into /Plugins
 ├── Tests/                              ← NUnit tests
-├── Misc.BetterSearch.zip               ← the compiled folder, zipped
 ├── Readme.txt
 └── TESTING.md                          ← manual test script
 ```
 
 The `Nop.Plugin.` prefix marks source. The same name without it is the deployable folder. Compiled output is committed rather than built by CI, so a source edit needs a rebuild and a re-copy before the deployable folder is current.
 
+Zips are not tracked. They duplicate the deployable folder byte for byte, and a compressed binary cannot be delta-compressed against its predecessor, so every repackage used to add a full copy to history. They are now built at release time and attached to a release instead.
+
 `docs/superpowers/` holds the design specs and implementation plans for the handling fee and search work.
 
 ## Installing
 
-1. Copy the plugin folder (the one without the `Nop.Plugin.` prefix) into `\Plugins` on the server, or upload the `.zip` through the admin area.
+1. Download the plugin's `.zip` from [Releases](https://github.com/muddro1/nopcommerce-plugins/releases) and upload it through the admin area, or copy the plugin folder (the one without the `Nop.Plugin.` prefix) straight into `\Plugins` on the server.
 2. Go to Configuration → Local plugins and click **Reload list of plugins**.
 3. Find the plugin and click **Install**. The site restarts itself.
 4. Configure it. Discount rules attach under Promotions → Discounts → a discount → Requirements. The two `Misc.` plugins get a Configure button on the plugin list.
@@ -76,6 +77,24 @@ BetterSearch and HandlingFee carry NUnit suites under `Tests/`, roughly 120 case
 
 Both plugins also ship a `TESTING.md` with a manual script for a real store: SQL to verify stored order columns, expected figures per scenario and the settings to toggle between parts.
 
+## Releases
+
+Each plugin versions independently, under a namespaced tag: `better-search/v1.00`, `handling-fee/v1.03`, `has-only-products/v1.02`. Download the packaged zips from [Releases](https://github.com/muddro1/nopcommerce-plugins/releases).
+
+To cut one, bump `Version` in both copies of the plugin's `plugin.json` (source and deployable folder), rebuild, copy the output over the deployable folder, then package and publish:
+
+```bash
+cd "HandlingFee/nopCommerce 4.50"
+cp ../../LICENSE.md Misc.HandlingFee/
+zip -X -r -q ../Misc.HandlingFee.zip Misc.HandlingFee -x '*.DS_Store'
+cd ../..
+git tag -a handling-fee/v1.04 -m "Handling fee for small orders 1.04 (nopCommerce 4.50)"
+git push origin handling-fee/v1.04
+gh release create handling-fee/v1.04 HandlingFee/Misc.HandlingFee.zip --title "Handling fee for small orders 1.04"
+```
+
+`LICENSE.md` goes inside the package because the zip distributes compiled GPL v3 code and the license has to travel with it. The zip itself stays untracked.
+
 ## Licensing
 
 Everything here is licensed under the **GNU General Public License v3**. The full text is in [LICENSE.md](LICENSE.md).
@@ -84,9 +103,9 @@ That is inherited, not chosen. nopCommerce ships under the nopCommerce Public Li
 
 **Customer has only these products in the cart**
 Copyright © Nop Solutions, Ltd, as the original "Customer has all of these products in the cart" plugin ([source](https://github.com/nopSolutions/HasAllProducts-discount-requiremement-plugin-for-nopcommerce), GPL v3, upstream version 1.36).
-Modified by Zach Malamud starting 2026-08-29: added the exclusive-cart and match-any conditions, renamed the system name, settings keys, controller and locale resources.
+Modified by muddro1 starting 2026-08-29: added the exclusive-cart and match-any conditions, renamed the system name, settings keys, controller and locale resources.
 
 **Better product search** and **Handling fee for small orders**
-Copyright © 2026 Zach Malamud. Original work, released under GPL v3 as derivative works of nopCommerce.
+Copyright © 2026 muddro1. Original work, released under GPL v3 as derivative works of nopCommerce.
 
 BetterSearch bundles Lucene.NET and J2N, both under the Apache License 2.0.

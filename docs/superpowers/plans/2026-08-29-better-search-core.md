@@ -144,7 +144,7 @@ Note `CopyLocalLockFileAssemblies` is **true** here, unlike the sibling plugins.
   "SystemName": "Misc.BetterSearch",
   "Version": "1.00",
   "SupportedVersions": [ "4.50" ],
-  "Author": "Zach Malamud",
+  "Author": "muddro1",
   "DisplayOrder": 1,
   "FileName": "Nop.Plugin.Misc.BetterSearch.dll",
   "Description": "Replaces product search with a relevance-ranked index that matches SKUs by substring and tolerates typos in product names and descriptions."
@@ -260,7 +260,7 @@ Expected: `Build succeeded.`, and `Lucene.Net.dll` plus `Lucene.Net.Analysis.Com
 - [ ] **Step 8: Commit**
 
 ```bash
-cd "$PROJ" && git add -A && git -c user.name="Zach Malamud" -c user.email="zach.malamud@gmail.com" commit -m "feat: better search plugin skeleton with Lucene
+cd "$PROJ" && git add -A && git -c user.name="muddro1" -c user.email="muddro1@users.noreply.github.com" commit -m "feat: better search plugin skeleton with Lucene
 
 Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01D1gESmDP8qdDtdGWiGayvB"
@@ -512,7 +512,7 @@ Expected: `Failed: 0, Passed: 12`
 - [ ] **Step 5: Commit**
 
 ```bash
-cd "$PROJ" && git add -A && git -c user.name="Zach Malamud" -c user.email="zach.malamud@gmail.com" commit -m "feat: SKU normalisation for substring identifier matching
+cd "$PROJ" && git add -A && git -c user.name="muddro1" -c user.email="muddro1@users.noreply.github.com" commit -m "feat: SKU normalisation for substring identifier matching
 
 Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01D1gESmDP8qdDtdGWiGayvB"
@@ -773,7 +773,7 @@ Expected: `Failed: 0, Passed: 21`
 - [ ] **Step 5: Commit**
 
 ```bash
-cd "$PROJ" && git add -A && git -c user.name="Zach Malamud" -c user.email="zach.malamud@gmail.com" commit -m "feat: product document builder and index schema
+cd "$PROJ" && git add -A && git -c user.name="muddro1" -c user.email="muddro1@users.noreply.github.com" commit -m "feat: product document builder and index schema
 
 Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01D1gESmDP8qdDtdGWiGayvB"
@@ -1137,7 +1137,7 @@ If a ranking assertion fails (`StartWith`, or one product outranking another) th
 - [ ] **Step 6: Commit**
 
 ```bash
-cd "$PROJ" && git add -A && git -c user.name="Zach Malamud" -c user.email="zach.malamud@gmail.com" commit -m "feat: search query builder with substring SKU matching
+cd "$PROJ" && git add -A && git -c user.name="muddro1" -c user.email="muddro1@users.noreply.github.com" commit -m "feat: search query builder with substring SKU matching
 
 Identifiers match exactly, by segment and by substring, and are never
 fuzzy-matched on the strict pass.
@@ -1336,7 +1336,7 @@ Expected: `Failed: 0, Passed: 48`
 - [ ] **Step 5: Commit**
 
 ```bash
-cd "$PROJ" && git add -A && git -c user.name="Zach Malamud" -c user.email="zach.malamud@gmail.com" commit -m "feat: Lucene index manager with two-pass search
+cd "$PROJ" && git add -A && git -c user.name="muddro1" -c user.email="muddro1@users.noreply.github.com" commit -m "feat: Lucene index manager with two-pass search
 
 Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01D1gESmDP8qdDtdGWiGayvB"

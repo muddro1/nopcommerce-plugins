@@ -210,7 +210,7 @@ Create `Nop.Plugin.Misc.HandlingFee.csproj`:
   "SystemName": "Misc.HandlingFee",
   "Version": "1.00",
   "SupportedVersions": [ "4.50" ],
-  "Author": "Zach Malamud",
+  "Author": "muddro1",
   "DisplayOrder": 1,
   "FileName": "Nop.Plugin.Misc.HandlingFee.dll",
   "Description": "Adds a configurable handling fee to physical orders at or below a threshold value that ship for free."

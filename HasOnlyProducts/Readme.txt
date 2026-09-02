@@ -23,7 +23,7 @@ Upstream it was forked from
   Listing:  https://www.nopcommerce.com/has-all-products-discount-requirement-rule
   License:  GNU General Public License v3
 
-Copyright (c) Nop Solutions, Ltd. Modified by Zach Malamud starting 2026-08-29:
+Copyright (c) Nop Solutions, Ltd. Modified by muddro1 starting 2026-08-29:
 added the "nothing else in the cart" and "any one of these is enough"
 conditions, and renamed the system name, settings keys, controller and locale
 resources so this plugin installs alongside the original. This modified version
