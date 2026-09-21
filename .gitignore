@@ -3,6 +3,7 @@ bin/
 obj/
 *.user
 .superpowers/
+.worktrees/
 
 # Plugin packages are built at release time and attached to GitHub Releases,
 # not tracked here. See the Releases section of README.md.
