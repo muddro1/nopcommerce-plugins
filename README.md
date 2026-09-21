@@ -62,7 +62,7 @@ Zips are not tracked. They duplicate the deployable folder byte for byte, and a 
 1. Download the plugin's `.zip` from [Releases](https://github.com/muddro1/nopcommerce-plugins/releases) and upload it through the admin area, or copy the plugin folder (the one without the `Nop.Plugin.` prefix) straight into `\Plugins` on the server.
 2. Go to Configuration → Local plugins and click **Reload list of plugins**.
 3. Find the plugin and click **Install**. The site restarts itself.
-4. Configure it. Discount rules attach under Promotions → Discounts → a discount → Requirements. The two `Misc.` plugins get a Configure button on the plugin list.
+4. Configure it. Discount rules attach under Promotions → Discounts → a discount → Requirements. Better product search and Handling fee for small orders get a Configure button on the plugin list; Accurate attribute combination pricing has no settings, so it has none.
 
 When upgrading over an existing install, follow the upgrade section in that plugin's `Readme.txt`. Some of them touch locale resources that need restoring in order.
 
@@ -86,7 +86,7 @@ Both plugins also ship a `TESTING.md` with a manual script for a real store: SQL
 
 ## Releases
 
-Each plugin versions independently, under a namespaced tag: `better-search/v1.00`, `handling-fee/v1.03`, `has-only-products/v1.02`. Download the packaged zips from [Releases](https://github.com/muddro1/nopcommerce-plugins/releases).
+Each plugin versions independently, under a namespaced tag: `better-search/v1.00`, `handling-fee/v1.03`, `has-only-products/v1.02`, `attribute-combination-pricing/v1.00`. Download the packaged zips from [Releases](https://github.com/muddro1/nopcommerce-plugins/releases).
 
 To cut one, bump `Version` in both copies of the plugin's `plugin.json` (source and deployable folder), rebuild, copy the output over the deployable folder, then package and publish:
 
@@ -112,7 +112,7 @@ That is inherited, not chosen. nopCommerce ships under the nopCommerce Public Li
 Copyright © Nop Solutions, Ltd, as the original "Customer has all of these products in the cart" plugin ([source](https://github.com/nopSolutions/HasAllProducts-discount-requiremement-plugin-for-nopcommerce), GPL v3, upstream version 1.36).
 Modified by muddro1 starting 2026-08-29: added the exclusive-cart and match-any conditions, renamed the system name, settings keys, controller and locale resources.
 
-**Better product search** and **Handling fee for small orders**
+**Better product search**, **Handling fee for small orders** and **Accurate attribute combination pricing**
 Copyright © 2026 muddro1. Original work, released under GPL v3 as derivative works of nopCommerce.
 
 BetterSearch bundles Lucene.NET and J2N, both under the Apache License 2.0.
