@@ -2,12 +2,14 @@ Accurate attribute combination pricing
 =======================================
 For nopCommerce 4.50.
 
-Fixes a stock nopCommerce bug: on the storefront product page, an "Associated
-to product" attribute value shows a "[+$X]" price label next to its name.
-When that value's attribute combination has an Overridden price set,
-nopCommerce ignores it and shows the associated product's own standalone
-price instead. This plugin corrects the label to reflect the combination's
-Overridden price.
+Fixes a stock nopCommerce bug: an "Associated to product" attribute value
+shows a "[+$X]" price label next to its name - on the product page, in the
+shopping cart, at checkout review, and in the description nopCommerce
+stores on a newly placed order. When that value's attribute combination
+has an Overridden price set, nopCommerce ignores it and shows the
+associated product's own standalone price instead. This plugin corrects
+the label to reflect the combination's Overridden price everywhere it
+appears.
 
   System name: Misc.AttributeCombinationPricing
 
@@ -52,6 +54,25 @@ no Overridden price set, keep nopCommerce's stock label - the associated
 product's own price - unchanged. Plain ("Simple") price-adjustment
 attribute values are untouched; the bug and the fix only concern
 "Associated to product" values.
+
+Two corrections work together to cover every surface:
+
+  - The product page's dropdown/radio labels are corrected directly.
+  - The underlying price-adjustment calculation nopCommerce uses
+    everywhere else - the shopping cart, checkout review, and the
+    description text nopCommerce stores on an order at the moment it is
+    placed - is corrected at its source, so all of those pick up the same
+    fix automatically. This does not touch how real order totals are
+    calculated; nopCommerce already charges the combination's Overridden
+    price correctly once an option is selected; only the label text was
+    ever wrong.
+
+New orders placed after this version is installed show the corrected
+label in their confirmation email and on their PDF invoice, since that
+text is generated once, at the moment the order is placed, and stored on
+the order from then on. Orders placed before this version was installed
+keep whatever label was stored at the time - this plugin does not rewrite
+historical order data.
 
 The correction applies automatically, store-wide, to every product. There
 is no configuration screen and nothing to set up beyond installing the
