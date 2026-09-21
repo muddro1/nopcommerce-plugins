@@ -34,10 +34,10 @@ that was confirmed. Only the small per-option label is wrong.
 
 - `PriceCalculationService.GetProductAttributeValuePriceAdjustmentAsync`
   (`Nop.Services/Catalog/PriceCalculationService.cs:455`) returns, for an
-  `AssociatedToProduct` value, the associated product's own final price
-  (line 482: `adjustment = (await GetFinalPriceAsync(associatedProduct,
-  customer)).finalPrice * value.Quantity`). It has no knowledge of attribute
-  combinations.
+  `AssociatedToProduct` value, the associated product's own price without
+  discounts applied (line 482: `adjustment = (await
+  GetFinalPriceAsync(associatedProduct, customer)).priceWithoutDiscounts *
+  value.Quantity`). It has no knowledge of attribute combinations.
 - `ProductModelFactory.PrepareProductAttributeModelsAsync`
   (`Nop.Web/Factories/ProductModelFactory.cs:836`, `protected virtual`, class
   is `public partial class ProductModelFactory : IProductModelFactory`, not
@@ -119,12 +119,16 @@ drift from the number the customer saw a moment before clicking.
 Confirmed with the store owner: show the real number (e.g. `+$21.00`) rather
 than hiding the `[+$X]` tag entirely for overridden values. The tradeoff is
 that the label and the live AJAX-updated total are computed by two separate
-code paths (this plugin's label computation vs. `GetUnitPriceAsync`), so if a
-customer-group price, tier price, or discount shifts the *base* price between
-page load and the moment the customer clicks, the two numbers could
-theoretically disagree for that one request. In the common case both read the
-same base price at the same moment, so they agree. This is an accepted,
-documented risk, not a defect — see Risks below.
+code paths (this plugin's label computation vs. `GetUnitPriceAsync`), and
+they disagree deterministically — not as a timing race, but every time —
+whenever an active discount or tier price applies to the product: the label
+computes `combination.OverriddenPrice − discount(base price)`, using the
+product's *discounted* base price but the *undiscounted* override, while the
+real checkout total computes `discount(combination.OverriddenPrice) −
+discount(base price)`, applying the same discount to both sides. Only when no
+discount or tier price is active on the product do the two calculations
+coincide. This is an accepted, documented risk, not a defect — see Risks
+below.
 
 ### Scoped to a single relevant attribute per product (v1)
 
@@ -143,10 +147,11 @@ don't have. See Out of scope.
 
 The fix applies to any product where this pattern occurs — an
 `AssociatedToProduct` value whose single-value combination has an
-`OverriddenPrice` set. There is no incorrect case this could introduce: a
-product with no such combination is untouched. A settings/config screen would
-add surface area for a plugin whose entire job is "compute the number
-correctly."
+`OverriddenPrice` set. A product with no such combination is untouched. This
+does not mean the correction is always accurate where it does apply — see the
+discount/tier-price divergence above — but a settings/config screen would add
+surface area for a plugin whose entire job is "compute the number correctly,"
+without changing that underlying risk.
 
 ## Architecture
 
@@ -226,14 +231,16 @@ needed.
 
 ## Risks and maintenance
 
-**Label/total divergence under a moving base price.** If a tier price,
-customer-group price, or an active discount changes the product's base price
-between page load and the moment the customer changes the selection, the
-statically-computed label and the AJAX-recomputed total are produced by
-separate calls and could disagree for that one page view. A full-page reload
-recomputes both from the same current state. Documented in the plugin's
-`Readme.txt`; not fixed in v1 because the target products don't have prices
-that move within a single page view.
+**Label/total divergence when a discount or tier price is active.** The
+label is computed as `combination.OverriddenPrice − discount(base price)`,
+but the real checkout total computes `discount(combination.OverriddenPrice) −
+discount(base price)` — the discount never gets applied to the override
+itself in the label calculation. This is deterministic, not a timing race:
+whenever an active discount or tier price applies to the product, the two
+numbers disagree, every time. Documented in the plugin's `Readme.txt`; not
+fixed in v1 because the target products don't currently have an active
+discount or tier price, and fixing it would mean changing the correction
+formula itself, which needs its own design/task cycle.
 
 **Static per page load, not per attribute change.** As decided above, the
 label does not re-run if the customer changes a different attribute

@@ -145,6 +145,8 @@ namespace Nop.Plugin.Misc.AttributeCombinationPricing.Factories
                     continue;
 
                 var mapping = await _productAttributeService.GetProductAttributeMappingByIdAsync(attributeModel.Id);
+                if (mapping == null)
+                    continue;
 
                 foreach (var valueModel in attributeModel.Values)
                 {

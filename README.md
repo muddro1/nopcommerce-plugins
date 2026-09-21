@@ -82,7 +82,7 @@ nopCommerce 4.50 pins SDK 6.0.101 in `global.json`. A newer SDK works if you set
 
 BetterSearch, HandlingFee and AttributeCombinationPricing carry NUnit suites under `Tests/`. BetterSearch and HandlingFee account for roughly 120 cases between them, covering the search query builder, SKU normalisation, index management, fee calculation and order totals; AttributeCombinationPricing's suite covers the corrected price-adjustment arithmetic and the display-layer override. They run against fakes, so no database or nopCommerce host is needed.
 
-Both plugins also ship a `TESTING.md` with a manual script for a real store: SQL to verify stored order columns, expected figures per scenario and the settings to toggle between parts.
+BetterSearch and HandlingFee also ship a `TESTING.md` with a manual script for a real store: SQL to verify stored order columns, expected figures per scenario and the settings to toggle between parts.
 
 ## Releases
 

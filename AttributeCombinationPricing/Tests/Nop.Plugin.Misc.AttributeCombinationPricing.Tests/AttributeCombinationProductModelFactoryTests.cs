@@ -105,7 +105,20 @@ namespace Nop.Plugin.Misc.AttributeCombinationPricing.Tests
                 PriceAdjustment = 5m
             };
 
+            //Center mount: Associated-to-Product, and a matching combination IS found, but that
+            //combination's OverriddenPrice is left null -> distinct from "no combination at all"
+            //(the `combination?.OverriddenPrice` navigation still yields null), must be left
+            //exactly as core computed it.
+            var noOverrideValue = new ProductAttributeValue
+            {
+                Id = 103,
+                ProductAttributeMappingId = mapping.Id,
+                AttributeValueTypeId = (int)AttributeValueType.AssociatedToProduct,
+                AssociatedProductId = 202
+            };
+
             var combination = new ProductAttributeCombination { OverriddenPrice = 320m };
+            var combinationWithoutOverride = new ProductAttributeCombination();
 
             var priceCalculationService = new Mock<IPriceCalculationService>();
             priceCalculationService.Setup(x => x.GetFinalPriceAsync(product, customer, 0, true, 1))
@@ -113,7 +126,7 @@ namespace Nop.Plugin.Misc.AttributeCombinationPricing.Tests
 
             var productAttributeService = new Mock<IProductAttributeService>();
             productAttributeService.Setup(x => x.GetProductAttributeValuesAsync(mapping.Id))
-                .ReturnsAsync(new List<ProductAttributeValue> { overriddenValue, plainValue, simpleValue });
+                .ReturnsAsync(new List<ProductAttributeValue> { overriddenValue, plainValue, simpleValue, noOverrideValue });
             productAttributeService.Setup(x => x.GetProductAttributeMappingByIdAsync(mapping.Id))
                 .ReturnsAsync(mapping);
 
@@ -125,11 +138,17 @@ namespace Nop.Plugin.Misc.AttributeCombinationPricing.Tests
                 .Setup(x => x.AddProductAttribute(string.Empty, mapping, plainValue.Id.ToString(), null))
                 .Returns("xml-plain");
             productAttributeParser
+                .Setup(x => x.AddProductAttribute(string.Empty, mapping, noOverrideValue.Id.ToString(), null))
+                .Returns("xml-no-override");
+            productAttributeParser
                 .Setup(x => x.FindProductAttributeCombinationAsync(product, "xml-overridden", true))
                 .ReturnsAsync(combination);
             productAttributeParser
                 .Setup(x => x.FindProductAttributeCombinationAsync(product, "xml-plain", true))
                 .ReturnsAsync((ProductAttributeCombination)null);
+            productAttributeParser
+                .Setup(x => x.FindProductAttributeCombinationAsync(product, "xml-no-override", true))
+                .ReturnsAsync(combinationWithoutOverride);
 
             //tax and currency pass through unchanged, so the assertions below can check exact figures
             var taxService = new Mock<ITaxService>();
@@ -162,7 +181,9 @@ namespace Nop.Plugin.Misc.AttributeCombinationPricing.Tests
                         new ProductDetailsModel.ProductAttributeValueModel
                             { Id = plainValue.Id, Name = "Left-handed mount", PriceAdjustment = "+$45.00", PriceAdjustmentValue = 45m },
                         new ProductDetailsModel.ProductAttributeValueModel
-                            { Id = simpleValue.Id, Name = "No mount", PriceAdjustment = "+$5.00", PriceAdjustmentValue = 5m }
+                            { Id = simpleValue.Id, Name = "No mount", PriceAdjustment = "+$5.00", PriceAdjustmentValue = 5m },
+                        new ProductDetailsModel.ProductAttributeValueModel
+                            { Id = noOverrideValue.Id, Name = "Center mount", PriceAdjustment = "+$40.00", PriceAdjustmentValue = 40m }
                     }
                 }
             };
@@ -179,6 +200,8 @@ namespace Nop.Plugin.Misc.AttributeCombinationPricing.Tests
             Assert.That(values[1].PriceAdjustmentValue, Is.EqualTo(45m));
             Assert.That(values[2].PriceAdjustment, Is.EqualTo("+$5.00"));
             Assert.That(values[2].PriceAdjustmentValue, Is.EqualTo(5m));
+            Assert.That(values[3].PriceAdjustment, Is.EqualTo("+$40.00"));
+            Assert.That(values[3].PriceAdjustmentValue, Is.EqualTo(40m));
         }
 
         [Test]

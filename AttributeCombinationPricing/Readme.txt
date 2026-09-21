@@ -71,6 +71,33 @@ have that shape (each has exactly one attribute driving the Overridden
 price), so this does not currently bite, but it is worth knowing about
 before using the plugin on a product with several interacting attributes.
 
+Known limitation: discounted or tier-priced products
+------------------------------------------------------
+The corrected label can be wrong whenever an active discount or tier
+price applies to the product - and this is not a rare race condition, it
+happens every time such a discount or tier price is active. The label is
+computed as the combination's Overridden price minus the product's own
+*discounted* base price, but the Overridden price itself is never run
+through that same discount. The real checkout total, by contrast,
+applies the discount to both sides: it is
+discount(Overridden price) minus discount(base price). Whenever a
+discount or tier price changes the base price, those two calculations
+diverge.
+
+For example: a $299 product with a 10% active discount and a $320
+attribute combination override. The real page shows a discounted price
+of $269.10, and selecting the option charges $288.00 - a true delta of
+$18.90. This plugin's label, however, shows +$50.90 for that option,
+which is worse than stock nopCommerce's own +$50.00 bug in this
+particular case.
+
+Store owners using this plugin on a product with an active discount or
+tier price should be aware the label may not match the real total in
+that situation. This is a known limitation of v1, not a defect that will
+be silently fixed later; correcting it would require the label
+computation to apply the same discount/tier-price logic the checkout
+total uses, which is a larger change reserved for a future version.
+
 
 Installing
 ----------
