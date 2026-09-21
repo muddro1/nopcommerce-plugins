@@ -1,0 +1,11 @@
+{
+  "Group": "Misc",
+  "FriendlyName": "Accurate attribute combination pricing",
+  "SystemName": "Misc.AttributeCombinationPricing",
+  "Version": "1.00",
+  "SupportedVersions": [ "4.50" ],
+  "Author": "muddro1",
+  "DisplayOrder": 1,
+  "FileName": "Nop.Plugin.Misc.AttributeCombinationPricing.dll",
+  "Description": "Corrects the storefront price label on \"Associated to product\" attribute values so it reflects the matching attribute combination's Overridden price, instead of the associated product's own price."
+}

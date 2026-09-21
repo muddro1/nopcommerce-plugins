@@ -1,12 +1,13 @@
 # nopCommerce plugins
 
-Three plugins for **nopCommerce 4.50**, each kept here as source and as a compiled folder you can drop straight onto a server.
+Four plugins for **nopCommerce 4.50**, each kept here as source and as a compiled folder you can drop straight onto a server.
 
 | Plugin | System name | Version | Does |
 |---|---|---|---|
 | [Better product search](BetterSearch/Readme.txt) | `Misc.BetterSearch` | 1.00 | Replaces product search with a Lucene.NET index that ranks by relevance, matches SKUs by substring and tolerates typos |
 | [Handling fee for small orders](HandlingFee/Readme.txt) | `Misc.HandlingFee` | 1.03 | Charges a fee on small physical orders that qualify for free shipping |
 | [Customer has only these products](HasOnlyProducts/Readme.txt) | `DiscountRequirement.HasOnlyProducts` | 1.02 | Discount requirement rule: the cart holds all of the listed products, or any one of them, and optionally nothing else |
+| [Accurate attribute combination pricing](AttributeCombinationPricing/Readme.txt) | `Misc.AttributeCombinationPricing` | 1.00 | Corrects the storefront price label on an Associated-to-Product attribute value so it reflects the attribute combination's Overridden price instead of the associated product's own price |
 
 Each plugin has its own `Readme.txt` covering configuration, edge cases and upgrade steps. Read that before deploying. The summaries below only cover what you would want to know before opening one.
 
@@ -29,6 +30,12 @@ If you charge sales tax on this fee, give it a dedicated **Handling** tax catego
 ## Customer has only these products in the cart
 
 A fork of the nopCommerce team's `DiscountRequirement.HasAllProducts` (upstream version 1.36), adding two conditions: the cart may be required to contain nothing but the listed products, and any one of them may satisfy the rule instead of all of them. Both plugins install side by side, since they use separate system names, settings keys, controllers and locale resources.
+
+## Accurate attribute combination pricing
+
+Fixes a stock nopCommerce bug on the storefront product page. When an "Associated to product" attribute value has a matching attribute combination with an Overridden price, the `[+$X]` label next to that value shows the associated product's own standalone price instead of the price the Overridden price actually implies. A $299 product with a Mount value associated to a $50 product, and an Overridden price of $320 for that combination, shows `[+$50.00]` in stock nopCommerce; this plugin corrects the label to `[+$21.00]`, the real difference between the combination's total and the base price. Selecting the option already charged the correct $320 before this plugin - only the label was wrong.
+
+The fix applies automatically, store-wide, with no configuration screen. Its one known limitation: the label is computed once at page load against the product's default attribute state, and does not recompute if the customer changes a different, interacting attribute afterward - this doesn't currently affect any product in use, since none of them have more than one attribute driving an Overridden price.
 
 ## Repository layout
 
@@ -73,7 +80,7 @@ nopCommerce 4.50 pins SDK 6.0.101 in `global.json`. A newer SDK works if you set
 
 ## Tests
 
-BetterSearch and HandlingFee carry NUnit suites under `Tests/`, roughly 120 cases between them, covering the search query builder, SKU normalisation, index management, fee calculation and order totals. They run against fakes, so no database or nopCommerce host is needed.
+BetterSearch, HandlingFee and AttributeCombinationPricing carry NUnit suites under `Tests/`. BetterSearch and HandlingFee account for roughly 120 cases between them, covering the search query builder, SKU normalisation, index management, fee calculation and order totals; AttributeCombinationPricing's suite covers the corrected price-adjustment arithmetic and the display-layer override. They run against fakes, so no database or nopCommerce host is needed.
 
 Both plugins also ship a `TESTING.md` with a manual script for a real store: SQL to verify stored order columns, expected figures per scenario and the settings to toggle between parts.
 
