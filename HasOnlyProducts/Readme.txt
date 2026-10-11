@@ -1,6 +1,6 @@
 "Customer has only these products in the cart" discount requirement rule
 =======================================================================
-For nopCommerce 4.50.
+For nopCommerce 4.50 (version 1.02) and nopCommerce 4.90 (version 2.00).
 
 A fork of the nopCommerce team's "Customer has all of these products in the cart"
 plugin (DiscountRequirement.HasAllProducts). It behaves the same way, plus two
@@ -147,3 +147,37 @@ Notes if you are not building with the .NET 6 SDK:
     that the post-build helper does not clean up. Delete them; the plugin folder
     should contain only the files listed in the shipped
     "DiscountRules.HasOnlyProducts" directory.
+
+
+nopCommerce 4.90 build (version 2.00)
+--------------------------------------
+"nopCommerce 4.90" holds a separate build for nopCommerce 4.90, next to the
+"nopCommerce 4.50" one: "DiscountRules.HasOnlyProducts" is the compiled plugin and
+"Nop.Plugin.DiscountRules.HasOnlyProducts" the source. It behaves exactly like 1.02; only
+what nopCommerce 4.90 changed underneath was ported. It is built against
+nopCommerce 4.90.8 and targets net9.0. Install it, and upgrade from an
+earlier 2.x, exactly as described above. The 4.50 build does not load on
+4.90, and the 4.90 build does not load on 4.50.
+
+The 4.90 source follows the upstream plugin's own 4.90 port (the
+"nopCommerce-4.90" branch of the HasAllProducts repository): the admin
+controller uses 4.90's permission attributes, and the configuration
+view's scripts use the current jQuery event syntax. The rule logic,
+settings keys and locale resources are unchanged from 1.02.
+
+Moving a store from nopCommerce 4.50 to 4.90 with this plugin installed:
+Do NOT uninstall the 1.02 build first - uninstalling deletes
+every discount requirement that uses it. Instead:
+
+  1. Upgrade nopCommerce itself, following nopCommerce's own upgrade
+     instructions.
+  2. Before starting the upgraded site, replace the "DiscountRules.HasOnlyProducts"
+     folder in \Plugins with the one from "nopCommerce 4.90".
+  3. Start the site. nopCommerce sees the version change from 1.02 to
+     2.00 and runs the plugin's update step, as for any upgrade above.
+
+Building the 4.90 source: same steps as above, but inside a nopCommerce
+4.90 source tree. Its global.json pins SDK 9.0.100. With only a newer SDK
+installed, change "rollForward" to "latestMajor" there, and set
+DOTNET_ROLL_FORWARD=Major so the post-build helper (now a net9.0 app) can
+run. The same Nop.Web.* host files still need deleting from the output.

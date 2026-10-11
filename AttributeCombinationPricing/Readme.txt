@@ -1,6 +1,6 @@
 Accurate attribute combination pricing
 =======================================
-For nopCommerce 4.50.
+For nopCommerce 4.50 (version 1.01) and nopCommerce 4.90 (version 2.00).
 
 Fixes a stock nopCommerce bug: an "Associated to product" attribute value
 shows a "[+$X]" price label next to its name - on the product page, in the
@@ -207,3 +207,48 @@ global.json and the project files target: it tells the .NET host to roll
 forward to the highest installed major version instead of failing to find
 a matching net6.0 runtime. It is harmless, and unnecessary, on a machine
 that does have the net6.0 runtime installed.
+
+
+nopCommerce 4.90 build (version 2.00)
+--------------------------------------
+"nopCommerce 4.90" holds a separate build for nopCommerce 4.90, next to the
+"nopCommerce 4.50" one: "Misc.AttributeCombinationPricing" is the compiled plugin and
+"Nop.Plugin.Misc.AttributeCombinationPricing" the source. It behaves exactly like 1.01; only
+what nopCommerce 4.90 changed underneath was ported. It is built against
+nopCommerce 4.90.8 and targets net9.0. Install it, and upgrade from an
+earlier 2.x, exactly as described above. The 4.50 build does not load on
+4.90, and the 4.90 build does not load on 4.50.
+
+nopCommerce 4.90 passes the store and the cart quantity into the price
+adjustment calculation. The 4.90 build passes both through as well, so
+the base price the corrected label is measured against is the same
+store- and quantity-specific price nopCommerce itself uses (tier prices
+at the item's quantity, rather than always at quantity 1). The
+correction, and the reason it is safe for real order totals, are
+unchanged: nopCommerce 4.90 still only asks for an attribute value's
+price adjustment when no attribute combination's Overridden price
+applies.
+
+Moving a store from nopCommerce 4.50 to 4.90 with this plugin installed:
+The plugin keeps no settings of its own, but there is still no need to
+uninstall it. Instead:
+
+  1. Upgrade nopCommerce itself, following nopCommerce's own upgrade
+     instructions.
+  2. Before starting the upgraded site, replace the "Misc.AttributeCombinationPricing"
+     folder in \Plugins with the one from "nopCommerce 4.90".
+  3. Start the site. The plugin stays installed and the correction is
+     active again straight away; there is nothing to migrate.
+
+Building the 4.90 source: same steps as above, but inside a nopCommerce
+4.90 source tree. Its global.json pins SDK 9.0.100. With only a newer SDK
+installed, change "rollForward" to "latestMajor" there, and set
+DOTNET_ROLL_FORWARD=Major so the post-build helper (now a net9.0 app) can
+run. The same Nop.Web.* host files still need deleting from the output.
+
+Running the 4.90 tests: the suite is under "nopCommerce 4.90/Tests". Copy
+"Nop.Plugin.Misc.AttributeCombinationPricing.Tests" into src/Tests/ of the 4.90 source tree,
+next to the plugin in src/Plugins/, and run it from there with
+DOTNET_ROLL_FORWARD=Major dotnet test, exactly as described for 4.50
+above. The tree's Directory.Build.props turns on implicit usings, which the
+4.90 test sources already account for.
