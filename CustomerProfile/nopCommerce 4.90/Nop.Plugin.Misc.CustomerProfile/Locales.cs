@@ -10,6 +10,7 @@ public static class Locales
         // Shown as the payment method name at checkout and on orders; admin plugin lists keep plugin.json's name
         [$"Plugins.FriendlyName.{CustomerProfileDefaults.SystemName}"] = "Net 30",
 
+        [P + "NotFound"] = "Not found.",
         [P + "Dealership"] = "BMW dealership",
         [P + "Dealership.Hint"] = "The BMW dealership this customer is with.",
 
@@ -119,6 +120,7 @@ public static class Locales
         [P + "Admin.DueOn"] = "Due",
         [P + "Admin.DaysOverdue"] = "Days overdue",
         [P + "Admin.Search"] = "Search",
+        [P + "Admin.NoData"] = "Nothing to show.",
 
         [P + "Settings"] = "Customer profile settings",
         [P + "Settings.Saved"] = "Settings saved.",

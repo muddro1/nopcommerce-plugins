@@ -67,3 +67,31 @@ public class AdminCustomerSavedConsumer : IConsumer<ModelReceivedEvent<BaseNopMo
         await _profileService.SaveAsync(profile);
     }
 }
+
+/// <summary>Saves the dealership entered on the registration page</summary>
+public class CustomerRegisteredConsumer : IConsumer<Nop.Core.Domain.Customers.CustomerRegisteredEvent>
+{
+    private readonly IBusinessProfileService _profileService;
+    private readonly IHttpContextAccessor _httpContextAccessor;
+
+    public CustomerRegisteredConsumer(IBusinessProfileService profileService, IHttpContextAccessor httpContextAccessor)
+    {
+        _profileService = profileService;
+        _httpContextAccessor = httpContextAccessor;
+    }
+
+    public async Task HandleEventAsync(Nop.Core.Domain.Customers.CustomerRegisteredEvent eventMessage)
+    {
+        var request = _httpContextAccessor.HttpContext?.Request;
+        if (request == null || !request.HasFormContentType)
+            return;
+
+        var (exists, dealership) = await request.TryGetFormValueAsync(CustomerProfileDefaults.FieldDealership);
+        if (!exists || string.IsNullOrWhiteSpace(dealership))
+            return;
+
+        var profile = await _profileService.GetOrNewAsync(eventMessage.Customer.Id);
+        profile.BmwDealership = dealership.ToString();
+        await _profileService.SaveAsync(profile);
+    }
+}

@@ -1,0 +1,37 @@
+@model ContactModel
+@{
+    const string P = CustomerProfileDefaults.LocalePrefix;
+    var selected = Model.Categories.ToHashSet();
+}
+<div class="inputs">
+    <label for="Name">@T(P + "Contacts.Name"):</label>
+    <input id="Name" name="Name" type="text" value="@Model.Name" maxlength="@CustomerProfileDefaults.ContactNameMaxLength" />
+    <nop-required />
+</div>
+<div class="inputs">
+    <label for="Email">@T(P + "Contacts.Email"):</label>
+    <input id="Email" name="Email" type="email" value="@Model.Email" maxlength="@CustomerProfileDefaults.ContactEmailMaxLength" />
+    <nop-required />
+</div>
+<div class="inputs">
+    <label for="Title">@T(P + "Contacts.Title"):</label>
+    <input id="Title" name="Title" type="text" value="@Model.Title" maxlength="@CustomerProfileDefaults.ContactTitleMaxLength" />
+</div>
+<div class="inputs">
+    <label>@T(P + "Contacts.Categories"):</label>
+    <ul class="option-list">
+        @foreach (var category in MessageCategories.All)
+        {
+            <li>
+                <input type="checkbox" id="cat-@((int)category)" name="Categories" value="@((int)category)" @(selected.Contains((int)category) ? "checked" : "") />
+                <label for="cat-@((int)category)">@T(P + "Category." + category)</label>
+            </li>
+        }
+    </ul>
+</div>
+<div class="inputs reversed">
+    <input type="checkbox" id="Active" name="Active" value="true" @(Model.Active ? "checked" : "") />
+    <input type="hidden" name="Active" value="false" />
+    <label for="Active">@T(P + "Contacts.Active")</label>
+    <span class="hint" style="display:block">@T(P + "Contacts.Active.Hint")</span>
+</div>

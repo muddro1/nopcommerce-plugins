@@ -1,0 +1,33 @@
+@model ContactModel
+@using Nop.Web.Components
+@{
+    Layout = "_ColumnsTwo";
+    const string P = CustomerProfileDefaults.LocalePrefix;
+    NopHtml.AddTitleParts(T(P + "Contacts.Edit").Text);
+    NopHtml.AppendPageCssClassParts("html-account-page");
+}
+
+@section left
+{
+    @await Component.InvokeAsync(typeof(CustomerNavigationViewComponent), new { selectedTabId = -1 })
+}
+
+<div class="page account-page customer-profile-page">
+    <div class="page-title">
+        <h1>@T("Account.MyAccount") - @T(P + "Contacts.Edit")</h1>
+    </div>
+    <div class="page-body">
+        <div asp-validation-summary="All" class="message-error"></div>
+        <form method="post" action="@Url.RouteUrl(CustomerProfileDefaults.RouteContactEdit, new { id = Model.Id })">
+            <div class="fieldset">
+                <div class="form-fields">
+                    <partial name="~/Plugins/Misc.CustomerProfile/Views/Public/_ContactFields.cshtml" model="Model" />
+                </div>
+            </div>
+            <div class="buttons">
+                <a class="button-2" href="@Url.RouteUrl(CustomerProfileDefaults.RouteBusinessDetails)">@T("Common.Cancel")</a>
+                <button type="submit" class="button-1">@T(P + "Contacts.Save")</button>
+            </div>
+        </form>
+    </div>
+</div>

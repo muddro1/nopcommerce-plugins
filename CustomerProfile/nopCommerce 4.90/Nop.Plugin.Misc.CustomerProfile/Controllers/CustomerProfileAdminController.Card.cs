@@ -35,7 +35,7 @@ public partial class CustomerProfileAdminController
             return Failure(await _localizationService.GetResourceAsync("Admin.AccessDenied.Description"));
 
         if (await _customerService.GetCustomerByIdAsync(customerId) == null)
-            return Failure(await _localizationService.GetResourceAsync("Admin.Common.NotFound"));
+            return Failure(await TAsync("NotFound"));
 
         var admin = await _workContext.GetCurrentCustomerAsync();
         var errors = await _contactEditor.SaveAsync(customerId, model, admin.Id);
@@ -50,7 +50,7 @@ public partial class CustomerProfileAdminController
 
         return await _contactEditor.DeleteAsync(customerId, id)
             ? Json(new { success = true })
-            : Failure(await _localizationService.GetResourceAsync("Admin.Common.NotFound"));
+            : Failure(await TAsync("NotFound"));
     }
 
     #endregion

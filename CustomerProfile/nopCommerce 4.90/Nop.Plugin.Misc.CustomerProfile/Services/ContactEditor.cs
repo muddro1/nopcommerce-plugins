@@ -47,7 +47,7 @@ public class ContactEditor
         {
             contact = await _contactService.GetByIdAsync(model.Id);
             if (contact == null || contact.CustomerId != customerId)
-                return new List<string> { await _localizationService.GetResourceAsync("Admin.Common.NotFound") };
+                return new List<string> { await TAsync("NotFound") };
         }
         else if (await _contactService.CountForCustomerAsync(customerId) >= CustomerProfileDefaults.MaxContactsPerCustomer)
         {

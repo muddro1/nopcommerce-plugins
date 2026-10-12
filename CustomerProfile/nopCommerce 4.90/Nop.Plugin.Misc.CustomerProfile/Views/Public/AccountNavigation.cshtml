@@ -1,0 +1,12 @@
+@model string
+@{
+    const string P = CustomerProfileDefaults.LocalePrefix;
+    var businessActive = Model is "BusinessDetails" or "ContactEdit" or "ContactAdd";
+    var taxActive = Model is "TaxExemption" or "TaxExemptionUpload";
+}
+<li class="customer-business-details @(businessActive ? "active" : "inactive")">
+    <a href="@Url.RouteUrl(CustomerProfileDefaults.RouteBusinessDetails)">@T(P + "BusinessDetails")</a>
+</li>
+<li class="customer-tax-exemption @(taxActive ? "active" : "inactive")">
+    <a href="@Url.RouteUrl(CustomerProfileDefaults.RouteTaxExemption)">@T(P + "TaxExemption")</a>
+</li>
