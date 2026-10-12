@@ -1,6 +1,6 @@
 Handling fee for small orders
 ==============================
-For nopCommerce 4.50 (version 1.03) and nopCommerce 4.90 (version 2.10).
+For nopCommerce 4.50 (version 1.03) and nopCommerce 4.90 (version 2.11).
 
 Adds a configurable handling fee to physical orders that are at or below a
 threshold value and ship for free. It is meant for stores that offer free
@@ -256,13 +256,17 @@ a matching net6.0 runtime. It is harmless, and unnecessary, on a machine
 that does have the net6.0 runtime installed.
 
 
-nopCommerce 4.90 build (version 2.10)
+nopCommerce 4.90 build (version 2.11)
 --------------------------------------
 "nopCommerce 4.90" holds a separate build for nopCommerce 4.90, next to the
 "nopCommerce 4.50" one: "Misc.HandlingFee" is the compiled plugin and
 "Nop.Plugin.Misc.HandlingFee" the source. Out of the box it behaves exactly
 like 1.03; 2.10 adds the rule options described below, all of which default
-to the 1.03 behaviour. It is built against
+to the 1.03 behaviour. 2.11 lists the settings page under an "FMS Plugins"
+item in the admin menu, and registers the "Contains only excluded items"
+label of the try-a-cart tester, which 2.10 sites otherwise show as the raw
+key Plugins.Misc.HandlingFee.Tester.OnlyExcludedItems. Upgrading a 2.10 site
+to 2.11 runs the plugin's update step, which adds it. It is built against
 nopCommerce 4.90.8 and targets net9.0. Install it, and upgrade from an
 earlier 2.x, exactly as described above. The 4.50 build does not load on
 4.90, and the 4.90 build does not load on 4.50.
@@ -349,7 +353,7 @@ its settings and its locale resources. Instead:
   2. Before starting the upgraded site, replace the "Misc.HandlingFee"
      folder in \Plugins with the one from "nopCommerce 4.90".
   3. Start the site. nopCommerce sees the version change from 1.03 to
-     2.10 and runs the plugin's update step, as for any upgrade above.
+     2.11 and runs the plugin's update step, as for any upgrade above.
 
 Building the 4.90 source: same steps as above, but inside a nopCommerce
 4.90 source tree. Its global.json pins SDK 9.0.100. With only a newer SDK

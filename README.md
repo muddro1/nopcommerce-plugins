@@ -5,7 +5,7 @@ Five plugins for nopCommerce. Four target both **nopCommerce 4.50** and **nopCom
 | Plugin | System name | Version (4.50 / 4.90) | Does |
 |---|---|---|---|
 | [Better product search](BetterSearch/Readme.txt) | `Misc.BetterSearch` | 1.00 / 2.00 | Replaces product search with a Lucene.NET index that ranks by relevance, matches SKUs by substring and tolerates typos |
-| [Handling fee for small orders](HandlingFee/Readme.txt) | `Misc.HandlingFee` | 1.03 / 2.10 | Charges a fee on small physical orders that qualify for free shipping |
+| [Handling fee for small orders](HandlingFee/Readme.txt) | `Misc.HandlingFee` | 1.03 / 2.11 | Charges a fee on small physical orders that qualify for free shipping |
 | [Customer has only these products](HasOnlyProducts/Readme.txt) | `DiscountRequirement.HasOnlyProducts` | 1.02 / 2.00 | Discount requirement rule: the cart holds all of the listed products, or any one of them, and optionally nothing else |
 | [Estimate builder](estimate-builder/README.md) | `Misc.EstimateBuilder` | — / 1.3.0 | Customers save products and their options into named estimates, export them to Excel or PDF, or move them to the cart; admins manage every estimate and build quotes for contacts without an account |
 | [Accurate attribute combination pricing](AttributeCombinationPricing/Readme.txt) | `Misc.AttributeCombinationPricing` | 1.01 / 2.00 | Corrects the price label on an Associated-to-Product attribute value - on the product page, cart, checkout and newly placed orders - so it reflects the attribute combination's Overridden price instead of the associated product's own price |
@@ -24,7 +24,7 @@ On nopCommerce 4.90, which can hand keyword search to a search provider plugin s
 
 ## Handling fee for small orders
 
-For stores offering free shipping above some order size that still want to recover picking and packing costs below it. The fee applies only to physical orders at or below the threshold that ship for free, measured on the goods subtotal excluding tax. On nopCommerce 4.90 (2.10) the rule is configurable from the admin page: flat, percentage or tiered fees; shipping-method, country and customer-role conditions; product and category exclusions; and a live plain-English summary with a "try a cart" tester. Every new option defaults to the original behaviour.
+For stores offering free shipping above some order size that still want to recover picking and packing costs below it. The fee applies only to physical orders at or below the threshold that ship for free, measured on the goods subtotal excluding tax. On nopCommerce 4.90 (2.10 and later) the rule is configurable from the admin page: flat, percentage or tiered fees; shipping-method, country and customer-role conditions; product and category exclusions; and a live plain-English summary with a "try a cart" tester. Every new option defaults to the original behaviour.
 
 The fee rides nopCommerce's payment-method-additional-fee channel, which is why it persists on the order, displays in the cart, admin, emails and PDF invoices, and picks up tax without extra code. Taxability comes from Configuration → Tax settings, not from the plugin.
 
