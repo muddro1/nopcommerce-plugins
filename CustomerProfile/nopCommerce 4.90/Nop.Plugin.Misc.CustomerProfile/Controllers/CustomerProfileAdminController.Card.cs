@@ -91,7 +91,7 @@ public partial class CustomerProfileAdminController
     [HttpPost]
     [RequestFormLimits(MultipartBodyLengthLimit = 26 * 1024 * 1024)]
     [RequestSizeLimit(26 * 1024 * 1024)]
-    public async Task<IActionResult> CertificateUpload(int customerId, IFormFile? file, DateTime? expiresOn,
+    public async Task<IActionResult> CertificateUpload(int customerId, IFormFile? file, int exemptionReasonId, DateTime? expiresOn,
         string? certificateNumber, string? issuingState)
     {
         if (!await CanEditCustomersAsync())
@@ -102,7 +102,7 @@ public partial class CustomerProfileAdminController
             return Failure(await TAsync("NotFound"));
 
         var admin = await _workContext.GetCurrentCustomerAsync();
-        var errors = await _taxExemptionService.UploadAsync(customerId, file, expiresOn, certificateNumber, issuingState,
+        var errors = await _taxExemptionService.UploadAsync(customerId, file, exemptionReasonId, expiresOn, certificateNumber, issuingState,
             admin.Id, approveImmediately: true);
         if (errors.Any())
             return Failure(errors.ToArray());
@@ -112,13 +112,13 @@ public partial class CustomerProfileAdminController
     }
 
     [HttpPost]
-    public async Task<IActionResult> CertificateApprove(int id, DateTime? expiresOn, string? note)
+    public async Task<IActionResult> CertificateApprove(int id, DateTime? expiresOn, int exemptionReasonId, string? note)
     {
         if (!await CanEditCustomersAsync())
             return Failure(await _localizationService.GetResourceAsync("Admin.AccessDenied.Description"));
 
         var admin = await _workContext.GetCurrentCustomerAsync();
-        var errors = await _taxExemptionService.ApproveAsync(id, expiresOn, admin.Id, note);
+        var errors = await _taxExemptionService.ApproveAsync(id, expiresOn, exemptionReasonId, admin.Id, note);
         return errors.Any()
             ? Failure(errors.ToArray())
             : Json(new { success = true, isTaxExempt = await IsTaxExemptAsync(id) });

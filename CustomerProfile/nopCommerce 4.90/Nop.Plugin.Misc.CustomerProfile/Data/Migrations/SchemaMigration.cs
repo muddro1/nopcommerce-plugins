@@ -15,6 +15,13 @@ public abstract class CustomerProfileSchemaBase : Migration
             Alter.Table(CustomerProfileDefaults.CertificateTable)
                 .AddColumn("ExemptionRemovedOnExpiry").AsBoolean().NotNullable().WithDefaultValue(false);
         }
+
+        if (Schema.Table(CustomerProfileDefaults.CertificateTable).Exists()
+            && !Schema.Table(CustomerProfileDefaults.CertificateTable).Column("ExemptionReasonId").Exists())
+        {
+            Alter.Table(CustomerProfileDefaults.CertificateTable)
+                .AddColumn("ExemptionReasonId").AsInt32().NotNullable().WithDefaultValue(0);
+        }
     }
 
     protected void CreateMissingTables()
@@ -55,6 +62,7 @@ public abstract class CustomerProfileSchemaBase : Migration
                 .WithColumn("FileName").AsString(400).NotNullable()
                 .WithColumn("ContentType").AsString(100).NotNullable()
                 .WithColumn("StateId").AsInt32().NotNullable().Indexed("IX_TaxExemptionCertificate_StateId")
+                .WithColumn("ExemptionReasonId").AsInt32().NotNullable().WithDefaultValue(0)
                 .WithColumn("ExpiresOn").AsDateTime2().Nullable()
                 .WithColumn("CertificateNumber").AsString(100).Nullable()
                 .WithColumn("IssuingState").AsString(100).Nullable()

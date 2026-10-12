@@ -14,6 +14,9 @@ public class TaxExemptionCertificate : BaseEntity
     public string ContentType { get; set; } = string.Empty;
     public int StateId { get; set; }
 
+    /// <summary>An <see cref="ExemptionReason"/></summary>
+    public int ExemptionReasonId { get; set; }
+
     /// <summary>Date only; valid through the end of this day in the store time zone</summary>
     public DateTime? ExpiresOn { get; set; }
 
@@ -35,5 +38,11 @@ public class TaxExemptionCertificate : BaseEntity
     {
         get => (CertificateState)StateId;
         set => StateId = (int)value;
+    }
+
+    public ExemptionReason ExemptionReason
+    {
+        get => (ExemptionReason)ExemptionReasonId;
+        set => ExemptionReasonId = (int)value;
     }
 }

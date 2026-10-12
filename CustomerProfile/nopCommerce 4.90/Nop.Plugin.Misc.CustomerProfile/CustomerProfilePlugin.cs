@@ -103,6 +103,7 @@ public class CustomerProfilePlugin : BasePlugin, IWidgetPlugin, IPaymentMethod
     public override async Task UpdateAsync(string currentVersion, string targetVersion)
     {
         await _localizationService.AddOrUpdateLocaleResourceAsync(new Dictionary<string, string>(Locales.All));
+        await _templateInstaller.UpdateAsync();
         await base.UpdateAsync(currentVersion, targetVersion);
     }
 

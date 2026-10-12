@@ -54,6 +54,17 @@
                         <span class="hint" style="display:block">@string.Format(T(P + "TaxExemption.File.Hint").Text, Model.MaxUploadSizeMb)</span>
                     </div>
                     <div class="inputs">
+                        <label for="exemptionReasonId">@T(P + "TaxExemption.Reason"):</label>
+                        <select id="exemptionReasonId" name="exemptionReasonId">
+                            <option value="0">@T(P + "TaxExemption.Reason.Select")</option>
+                            @foreach (var reason in ExemptionReasons.All)
+                            {
+                                <option value="@((int)reason)" selected="@(reason == Model.ExemptionReason)">@T(P + "TaxExemption.Reason." + reason)</option>
+                            }
+                        </select>
+                        <nop-required />
+                    </div>
+                    <div class="inputs">
                         <label for="expiresOn">@T(P + "TaxExemption.ExpiresOn"):</label>
                         <input id="expiresOn" name="expiresOn" type="date" min="@Model.Today.ToString("yyyy-MM-dd")" />
                         <span class="hint" style="display:block">@T(P + "TaxExemption.ExpiresOn.Hint")</span>
@@ -85,6 +96,7 @@
                                 <th>@T(P + "TaxExemption.UploadedOn")</th>
                                 <th>@T(P + "TaxExemption.State")</th>
                                 <th>@T(P + "TaxExemption.ExpiresOn")</th>
+                                <th>@T(P + "TaxExemption.Reason")</th>
                                 <th>@T(P + "TaxExemption.ReviewNote")</th>
                                 <th></th>
                             </tr>
@@ -96,6 +108,7 @@
                                     <td>@((await DateTimeHelper.ConvertToUserTimeAsync(cert.UploadedOnUtc, DateTimeKind.Utc)).ToShortDateString())</td>
                                     <td>@T(P + "TaxExemption.State." + cert.State)</td>
                                     <td>@cert.ExpiresOn?.ToShortDateString()</td>
+                                    <td>@T(P + "TaxExemption.Reason." + cert.ExemptionReason)</td>
                                     <td>@cert.ReviewNote</td>
                                     <td><a href="@Url.RouteUrl(CustomerProfileDefaults.RouteCertificateFile, new { id = cert.Id })" target="_blank" rel="noopener">@T(P + "TaxExemption.View")</a></td>
                                 </tr>

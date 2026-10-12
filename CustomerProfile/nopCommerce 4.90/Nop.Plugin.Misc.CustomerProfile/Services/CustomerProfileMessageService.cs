@@ -156,6 +156,8 @@ public class CustomerProfileMessageService : ICustomerProfileMessageService
 
         var stateName = await _localizationService.GetResourceAsync(
             CustomerProfileDefaults.LocalePrefix + "TaxExemption.State." + certificate.State, languageId);
+        var reasonName = await _localizationService.GetResourceAsync(
+            CustomerProfileDefaults.LocalePrefix + "TaxExemption.Reason." + certificate.ExemptionReason, languageId);
         var daysLeft = certificate.ExpiresOn.HasValue ? Math.Max((certificate.ExpiresOn.Value.Date - _clock.Today).Days, 0) : 0;
 
         Task AddTokens(IList<Token> tokens)
@@ -163,6 +165,7 @@ public class CustomerProfileMessageService : ICustomerProfileMessageService
             tokens.Add(new Token("TaxExemption.ExpiresOn", certificate.ExpiresOn?.ToShortDateString() ?? string.Empty));
             tokens.Add(new Token("TaxExemption.DaysLeft", daysLeft));
             tokens.Add(new Token("TaxExemption.State", stateName.ToLowerInvariant()));
+            tokens.Add(new Token("TaxExemption.Reason", reasonName));
             tokens.Add(new Token("TaxExemption.ReviewNote", certificate.ReviewNote ?? string.Empty));
             tokens.Add(new Token("TaxExemption.CertificateNumber", certificate.CertificateNumber ?? string.Empty));
             tokens.Add(new Token("TaxExemption.UploadedOn", _clock.ToStoreDate(certificate.UploadedOnUtc).ToShortDateString()));

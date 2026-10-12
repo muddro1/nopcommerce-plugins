@@ -47,6 +47,7 @@
                                 <th>@T(P + "Admin.Customer")</th>
                                 <th>@T(P + "Dealership")</th>
                                 <th>@T(P + "TaxExemption.State")</th>
+                                <th>@T(P + "TaxExemption.Reason")</th>
                                 <th>@T(P + "TaxExemption.ExpiresOn")</th>
                                 <th>@T(P + "TaxExemption.UploadedOn")</th>
                                 <th>@T(P + "TaxExemption.UploadedBy")</th>
@@ -63,6 +64,7 @@
                                     </td>
                                     <td>@row.Dealership</td>
                                     <td>@T(P + "TaxExemption.State." + cert.State)</td>
+                                    <td>@T(P + "TaxExemption.Reason." + cert.ExemptionReason)</td>
                                     <td>@cert.ExpiresOn?.ToShortDateString()</td>
                                     <td>@((await DateTimeHelper.ConvertToUserTimeAsync(cert.UploadedOnUtc, DateTimeKind.Utc)).ToShortDateString())</td>
                                     <td>@(cert.UploadedByCustomerId == cert.CustomerId ? T(P + "TaxExemption.UploadedBy.Customer") : T(P + "TaxExemption.UploadedBy.Admin"))</td>
