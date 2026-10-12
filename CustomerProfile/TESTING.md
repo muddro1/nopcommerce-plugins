@@ -1,6 +1,6 @@
 # Customer profile plugin — staging test script
 
-**Plugin:** Misc.CustomerProfile 1.0.6, built against nopCommerce 4.90
+**Plugin:** Misc.CustomerProfile 1.0.7, built against nopCommerce 4.90
 **Purpose:** confirm on a real store what the automated tests could only confirm against mocks.
 
 The 49 automated tests cover the decision rules (expiry, overdue, which contacts get a copy,
@@ -126,6 +126,7 @@ Check emails under **System → Message queue** rather than waiting for delivery
    - [ ] After the reload AP shows the new categories.
 10. Admin card: pencil on AP, tick three or more categories, **Save contact**, then press F5.
    - [ ] AP lists every ticked category, not only the first, one per line.
+   - [ ] A's Business details page lists AP's categories one per line too.
 
 ## Part 7 — Export
 

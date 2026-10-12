@@ -72,7 +72,13 @@
                                         }
                                     </td>
                                     <td>@contact.Email</td>
-                                    <td>@string.Join(", ", MessageCategories.All.Where(c => contact.Categories.HasFlag(c)).Select(c => T(P + "Category." + c).Text))</td>
+                                    <td>
+                                        @* One per line so the column keeps its width however many are ticked *@
+                                        @foreach (var category in MessageCategories.All.Where(c => contact.Categories.HasFlag(c)))
+                                        {
+                                            <div>@T(P + "Category." + category)</div>
+                                        }
+                                    </td>
                                     <td style="white-space:nowrap">
                                         <a href="@Url.RouteUrl(CustomerProfileDefaults.RouteContactEdit, new { id = contact.Id })">@T("Common.Edit")</a>
                                         <form method="post" action="@Url.RouteUrl("CustomerProfile.ContactDelete", new { id = contact.Id })" style="display:inline"
