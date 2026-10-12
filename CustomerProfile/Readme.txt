@@ -1,6 +1,6 @@
 Customer profile
 ================
-For nopCommerce 4.90 (version 1.0.4).
+For nopCommerce 4.90 (version 1.0.5).
 
 Extends the customer record for B2B customers:
 

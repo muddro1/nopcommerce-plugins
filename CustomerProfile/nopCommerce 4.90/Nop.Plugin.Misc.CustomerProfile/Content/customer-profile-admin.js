@@ -141,7 +141,10 @@
 
         function saveContact() {
             var $error = $('#cp-contact-error');
-            var categories = $('.cp-contact-category:checked').map(function () { return this.value; }).get();
+            // One combined flags value rather than a repeated Categories field: something between the browser and
+            // the store (seen on staging) kept only the first of the repeated values
+            var categories = 0;
+            $('.cp-contact-category:checked').each(function () { categories |= parseInt(this.value, 10); });
             var postData = {
                 customerId: $contacts.data('customer-id'),
                 Id: $('#cp-contact-id').val(),
