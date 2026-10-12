@@ -129,6 +129,7 @@ namespace Nop.Plugin.Misc.HandlingFee.Tests
 
             context.HasShippedItem.Should().BeFalse();
             context.SubtotalAfterDiscounts.Should().Be(9m); //the gift card alone
+            context.OnlyExcludedItems.Should().BeFalse();
         }
 
         [Test]
@@ -139,6 +140,7 @@ namespace Nop.Plugin.Misc.HandlingFee.Tests
 
             context.HasShippedItem.Should().BeFalse();
             context.SubtotalAfterDiscounts.Should().Be(0m);
+            context.OnlyExcludedItems.Should().BeTrue();
             _measuredCarts.Should().BeEmpty();
         }
 

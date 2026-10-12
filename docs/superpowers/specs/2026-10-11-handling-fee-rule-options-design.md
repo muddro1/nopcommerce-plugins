@@ -47,6 +47,9 @@ The fee applies when **all** of these hold. New conditions are marked ★.
 2. ★ The customer has none of the exempt customer roles.
 3. ★ (Exclusion mode "waive") The cart contains no excluded product, and no
    product in an excluded category.
+   ★ (Exclusion mode "leave out") The cart is not made up entirely of
+   excluded items. Otherwise there is nothing left to measure, and a zero
+   subtotal must not pass the threshold.
 4. The cart contains at least one shipped item. ★ This is now a setting
    (default on). In exclusion mode "leave out", excluded items don't count.
 5. ★ The shipping address country is one of the selected countries, or no
@@ -74,8 +77,14 @@ charge at the last step.
 **Fee amount**, once the rule passes:
 
 - **Flat:** the fee amount (as today).
-- **Percentage:** percent × measured subtotal, clamped to an optional minimum
-  and maximum, then rounded the way nopCommerce rounds prices.
+- **Percentage:** percent × measured subtotal, rounded to 2 places, clamped
+  to an optional minimum and maximum, then passed through
+  `IPriceCalculationService.RoundPriceAsync` (the primary currency's rounding
+  rule). The rounding happens in the payment service and the admin preview, so
+  the rule itself stays free of nopCommerce services. Because it runs after
+  the clamp, a currency that rounds to 0.05 can land a fee up to one rounding
+  step above the maximum. Flat and tiered fees are charged exactly as entered,
+  so a store upgraded from 2.00 is unaffected.
 - **Tiered:** the bands are rows of "subtotal up to X → fee Y", sorted by X.
   The fee is the first band whose X is at or above the measured subtotal. Above
   the top band, there is no fee.

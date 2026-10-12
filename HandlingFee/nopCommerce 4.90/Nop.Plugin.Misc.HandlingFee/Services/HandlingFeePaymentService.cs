@@ -90,7 +90,12 @@ namespace Nop.Plugin.Misc.HandlingFee.Services
 
             var context = await _contextFactory.CreateAsync(cart, settings, orderTotalCalculationService);
 
-            return fee + HandlingFeeRule.Evaluate(settings, context).Fee;
+            var decision = HandlingFeeRule.Evaluate(settings, context);
+            var handlingFee = HandlingFeeRule.NeedsCurrencyRounding(settings, decision)
+                ? await _priceCalculationService.RoundPriceAsync(decision.Fee)
+                : decision.Fee;
+
+            return fee + handlingFee;
         }
 
 

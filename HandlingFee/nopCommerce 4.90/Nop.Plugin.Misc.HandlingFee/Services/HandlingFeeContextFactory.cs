@@ -107,6 +107,7 @@ namespace Nop.Plugin.Misc.HandlingFee.Services
                 ShippingTotal = shippingTotal,
                 HasShippedItem = hasShippedItem,
                 HasExcludedItem = excludedItems.Count > 0,
+                OnlyExcludedItems = cart.Count > 0 && excludedItems.Count == cart.Count,
                 CustomerRoleIds = await GetCustomerRoleIdsAsync(customer, settings),
                 CountryId = await GetShippingCountryIdAsync(customer, settings),
                 ShippingProviderSystemName = providerSystemName,

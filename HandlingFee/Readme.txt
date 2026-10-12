@@ -303,6 +303,11 @@ The Configure page is organised into cards:
       minimum and maximum; 0 means none), or Tiered bands - "subtotal up to X
       pays Y", with no fee above the highest band. For tiered fees the bands
       replace the order threshold.
+      A percentage fee is rounded the way the primary currency rounds
+      prices (for example up to the next 0.05), after the minimum and
+      maximum are applied - so it can end up a fraction of a rounding step
+      above the maximum. Flat and tiered fees are charged exactly as
+      entered.
 
   When the fee applies
       Measure subtotal: after discounts (as before), or before order-subtotal
@@ -320,7 +325,8 @@ The Configure page is organised into cards:
       Pick categories (their subcategories are included) and products. Then
       choose what an excluded item does: waive the fee for the whole order,
       or leave it out - it then doesn't count toward the subtotal and doesn't
-      make the order count as physical.
+      make the order count as physical. An order made up only of excluded items
+      never pays the fee in either mode.
 
 Before the customer has chosen a shipping method or entered an address, the
 method and country conditions count as met. The fee can then drop off at

@@ -97,6 +97,40 @@ namespace Nop.Plugin.Misc.HandlingFee.Tests
             Evaluate(settings, Cart() with { HasExcludedItem = true }).Reason.Should().Be(HandlingFeeReason.Applied);
         }
 
+        [TestCase(HandlingFeeType.Flat)]
+        [TestCase(HandlingFeeType.Percentage)]
+        [TestCase(HandlingFeeType.Tiered)]
+        public void A_cart_of_only_excluded_items_pays_nothing_in_leave_out_mode_even_without_a_shipped_item_rule(HandlingFeeType feeType)
+        {
+            //the factory reports a zero measured subtotal for such a cart; without this guard zero
+            //sits under every threshold and band, and a percentage minimum would still be charged
+            var settings = Settings();
+            settings.ExclusionMode = HandlingFeeExclusionMode.LeaveOut;
+            settings.RequireShippedItem = false;
+            settings.FeeType = feeType;
+            settings.FeePercent = 10m;
+            settings.FeeMinimum = 2m;
+            settings.TiersJson = HandlingFeeRule.SerialiseTiers(new[] { new HandlingFeeTier { UpTo = 25m, Fee = 5.95m } });
+
+            var allExcluded = Cart(0m) with { HasShippedItem = false, HasExcludedItem = true, OnlyExcludedItems = true };
+            Evaluate(settings, allExcluded).Should().Be(new HandlingFeeDecision(0m, HandlingFeeReason.ExcludedItem, 0m));
+
+            //and the guard is specific to that case: a genuinely empty-looking cart with nothing excluded still pays
+            Evaluate(settings, Cart(0m) with { HasShippedItem = false }).Reason.Should().Be(HandlingFeeReason.Applied);
+        }
+
+        [Test]
+        public void Currency_rounding_is_requested_only_for_an_applied_percentage_fee()
+        {
+            var settings = Settings();
+            HandlingFeeRule.NeedsCurrencyRounding(settings, Evaluate(settings, Cart())).Should().BeFalse();
+
+            settings.FeeType = HandlingFeeType.Percentage;
+            settings.FeePercent = 10m;
+            HandlingFeeRule.NeedsCurrencyRounding(settings, Evaluate(settings, Cart())).Should().BeTrue();
+            HandlingFeeRule.NeedsCurrencyRounding(settings, Evaluate(settings, Cart(60m))).Should().BeFalse();
+        }
+
         [Test]
         public void No_shipped_item_can_be_allowed()
         {

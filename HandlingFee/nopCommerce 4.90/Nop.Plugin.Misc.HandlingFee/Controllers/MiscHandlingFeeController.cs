@@ -47,6 +47,7 @@ namespace Nop.Plugin.Misc.HandlingFee.Controllers
         private readonly ICustomerService _customerService;
         private readonly ILocalizationService _localizationService;
         private readonly INotificationService _notificationService;
+        private readonly IPriceCalculationService _priceCalculationService;
         private readonly IPriceFormatter _priceFormatter;
         private readonly IProductModelFactory _productModelFactory;
         private readonly IProductService _productService;
@@ -67,6 +68,7 @@ namespace Nop.Plugin.Misc.HandlingFee.Controllers
             ICustomerService customerService,
             ILocalizationService localizationService,
             INotificationService notificationService,
+            IPriceCalculationService priceCalculationService,
             IPriceFormatter priceFormatter,
             IProductModelFactory productModelFactory,
             IProductService productService,
@@ -83,6 +85,7 @@ namespace Nop.Plugin.Misc.HandlingFee.Controllers
             _customerService = customerService;
             _localizationService = localizationService;
             _notificationService = notificationService;
+            _priceCalculationService = priceCalculationService;
             _priceFormatter = priceFormatter;
             _productModelFactory = productModelFactory;
             _productService = productService;
@@ -353,7 +356,8 @@ namespace Nop.Plugin.Misc.HandlingFee.Controllers
                 SubtotalBeforeOrderDiscounts = test.SubtotalBeforeOrderDiscounts ?? test.Subtotal,
                 ShippingTotal = test.Shipping,
                 HasShippedItem = test.HasShippedItem,
-                HasExcludedItem = test.HasExcludedItem,
+                HasExcludedItem = test.HasExcludedItem || test.OnlyExcludedItems,
+                OnlyExcludedItems = test.OnlyExcludedItems,
                 CustomerRoleIds = test.RoleId > 0 ? new[] { test.RoleId } : Array.Empty<int>(),
                 CountryId = test.CountryId > 0 ? test.CountryId : null,
                 ShippingProviderSystemName = token.StartsWith(PROVIDER_PREFIX, StringComparison.OrdinalIgnoreCase) ? token[PROVIDER_PREFIX.Length..] : null,
@@ -361,6 +365,10 @@ namespace Nop.Plugin.Misc.HandlingFee.Controllers
             };
 
             var decision = HandlingFeeRule.Evaluate(settings, context);
+
+            //the same currency rounding the payment service applies, so the preview matches checkout
+            if (HandlingFeeRule.NeedsCurrencyRounding(settings, decision))
+                decision = decision with { Fee = await _priceCalculationService.RoundPriceAsync(decision.Fee) };
             var money = await GetMoneyFormatterAsync(settings, decision);
 
             return Json(new

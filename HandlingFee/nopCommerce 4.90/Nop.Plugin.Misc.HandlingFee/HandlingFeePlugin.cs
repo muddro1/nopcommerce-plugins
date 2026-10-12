@@ -168,6 +168,7 @@ namespace Nop.Plugin.Misc.HandlingFee
                 ["Plugins.Misc.HandlingFee.Tester.Shipping"] = "Shipping charge",
                 ["Plugins.Misc.HandlingFee.Tester.HasShippedItem"] = "Has a shipped item",
                 ["Plugins.Misc.HandlingFee.Tester.HasExcludedItem"] = "Contains an excluded item",
+                ["Plugins.Misc.HandlingFee.Tester.OnlyExcludedItems"] = "Contains only excluded items",
                 ["Plugins.Misc.HandlingFee.Tester.Role"] = "Customer role",
                 ["Plugins.Misc.HandlingFee.Tester.Country"] = "Ships to",
                 ["Plugins.Misc.HandlingFee.Tester.ShippingMethod"] = "Shipping method",

@@ -358,6 +358,7 @@ saving and reopen it. Nothing you typed should have been stored.
 | **Excluded categories**: Gift Cards, mode **Waive the fee** | Gift card + physical item, total 30.00 | none |
 | (same), mode **Leave them out** | Gift card 25.00 + physical item 20.00, free shipping | 4.95 (only 20.00 measured) |
 | (same), mode **Leave them out** | Gift card only (not shipped) | none (nothing left that ships) |
+| (same), mode **Leave them out**, **Require a shipped item** unticked | Gift card only | none (only excluded items) |
 | **Excluded products**: pick one with **Choose products** | That product + another, 30.00 | none |
 
 For each row, the **Try a cart** tester given the same inputs must agree with

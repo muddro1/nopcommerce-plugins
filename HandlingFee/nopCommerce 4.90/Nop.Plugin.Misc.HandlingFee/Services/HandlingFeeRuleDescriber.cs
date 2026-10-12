@@ -139,7 +139,7 @@ namespace Nop.Plugin.Misc.HandlingFee.Services
                 HandlingFeeReason.Applied => $"Charged {money(decision.Fee)} (measured subtotal {money(decision.MeasuredSubtotal)}).",
                 HandlingFeeReason.Disabled => "No fee: the handling fee is switched off.",
                 HandlingFeeReason.ExemptRole => "No fee: the customer has an exempt role.",
-                HandlingFeeReason.ExcludedItem => "No fee: the cart contains an excluded item.",
+                HandlingFeeReason.ExcludedItem => "No fee: the cart contains excluded items.",
                 HandlingFeeReason.NoShippedItem => "No fee: nothing in the cart ships.",
                 HandlingFeeReason.CountryNotIncluded => "No fee: the order ships to a country the fee does not apply to.",
                 HandlingFeeReason.ShippingMethodNotIncluded => "No fee: the chosen shipping method is not one the fee applies to.",

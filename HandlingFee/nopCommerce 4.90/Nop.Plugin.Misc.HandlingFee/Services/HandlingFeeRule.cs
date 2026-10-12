@@ -27,6 +27,12 @@ namespace Nop.Plugin.Misc.HandlingFee.Services
         /// <summary>Whether the cart holds an excluded product, or a product in an excluded category</summary>
         public bool HasExcludedItem { get; init; }
 
+        /// <summary>
+        /// Whether every item in the cart is excluded. In leave-out mode that leaves nothing to
+        /// measure, which must not read as a zero subtotal sitting under the threshold.
+        /// </summary>
+        public bool OnlyExcludedItems { get; init; }
+
         /// <summary>The customer's role identifiers</summary>
         public IReadOnlyCollection<int> CustomerRoleIds { get; init; } = Array.Empty<int>();
 
@@ -110,6 +116,11 @@ namespace Nop.Plugin.Misc.HandlingFee.Services
             if (settings.ExclusionMode == HandlingFeeExclusionMode.WaiveFee && context.HasExcludedItem)
                 return No(HandlingFeeReason.ExcludedItem);
 
+            //leaving out every item leaves nothing for a fee to be about - checked here rather than
+            //relying on "Require a shipped item", which a merchant can untick
+            if (settings.ExclusionMode == HandlingFeeExclusionMode.LeaveOut && context.OnlyExcludedItems)
+                return No(HandlingFeeReason.ExcludedItem);
+
             //the fee pays for physical handling, so by default downloadable and virtual orders are exempt
             if (settings.RequireShippedItem && !context.HasShippedItem)
                 return No(HandlingFeeReason.NoShippedItem);
@@ -147,6 +158,8 @@ namespace Nop.Plugin.Misc.HandlingFee.Services
                     if (measured > settings.ThresholdAmount)
                         return No(HandlingFeeReason.AboveThreshold);
 
+                    //2 places here; the caller then applies the primary currency's own rounding
+                    //(see NeedsCurrencyRounding), which needs a nopCommerce service this class avoids
                     fee = Math.Round(measured * settings.FeePercent / 100m, 2, MidpointRounding.AwayFromZero);
                     if (settings.FeeMinimum > decimal.Zero && fee < settings.FeeMinimum)
                         fee = settings.FeeMinimum;
@@ -170,6 +183,19 @@ namespace Nop.Plugin.Misc.HandlingFee.Services
                 return No(HandlingFeeReason.ZeroFee);
 
             return new HandlingFeeDecision(fee, HandlingFeeReason.Applied, measured);
+        }
+
+        /// <summary>
+        /// Whether the decided fee should go through nopCommerce's currency rounding
+        /// (IPriceCalculationService.RoundPriceAsync). Only a computed percentage needs it: flat
+        /// and tiered fees are amounts the merchant typed, and rounding those would change what a
+        /// store upgraded from 2.00 charges.
+        /// </summary>
+        public static bool NeedsCurrencyRounding(HandlingFeeSettings settings, HandlingFeeDecision decision)
+        {
+            return settings?.FeeType == HandlingFeeType.Percentage
+                && decision?.Reason == HandlingFeeReason.Applied
+                && decision.Fee > decimal.Zero;
         }
 
         /// <summary>

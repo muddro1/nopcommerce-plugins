@@ -133,6 +133,8 @@ namespace Nop.Plugin.Misc.HandlingFee.Models
 
         public bool HasExcludedItem { get; set; }
 
+        public bool OnlyExcludedItems { get; set; }
+
         public int RoleId { get; set; }
 
         public int CountryId { get; set; }
