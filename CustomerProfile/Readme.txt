@@ -1,6 +1,6 @@
 Customer profile
 ================
-For nopCommerce 4.90 (version 1.0.0).
+For nopCommerce 4.90 (version 1.0.1).
 
 Extends the customer record for B2B customers:
 
@@ -141,6 +141,19 @@ subclass. After upgrading nopCommerce, re-check that the plugin still
 starts and that contact copies still arrive, because the subclass repeats
 core's constructor. Another plugin that also replaces that service would
 conflict with this one.
+
+
+Upgrading from 1.0.0
+--------------------
+1.0.0 created no tables on stores that also run Estimate Builder: its
+install step had the same migration timestamp as one of Estimate Builder's,
+and nopCommerce skipped it as already done. The admin lists then failed with
+"Invalid object name 'Net30Order'" or "'TaxExemptionCertificate'".
+
+Upload 1.0.1 over the installed 1.0.0 (Local plugins > Upload plugin or
+theme) and restart. Don't uninstall first. On restart nopCommerce sees the
+new version and runs 1.0.1's upgrade step, which creates any missing tables.
+Settings, templates and the schedule task from 1.0.0 are kept.
 
 
 Uninstalling

@@ -1,6 +1,6 @@
 # Customer profile plugin — staging test script
 
-**Plugin:** Misc.CustomerProfile 1.0.0, built against nopCommerce 4.90
+**Plugin:** Misc.CustomerProfile 1.0.1, built against nopCommerce 4.90
 **Purpose:** confirm on a real store what the automated tests could only confirm against mocks.
 
 The 41 automated tests cover the decision rules (expiry, overdue, which contacts get a copy,
@@ -24,6 +24,8 @@ Check emails under **System → Message queue** rather than waiting for delivery
    - [ ] **Content management → Message templates**: eight templates starting `CustomerProfile.`.
    - [ ] **System → Schedule tasks**: "Customer profile: tax exemption and Net 30 reminders", every 14400 seconds.
    - [ ] **FMS Plugins → Customer Profile** has Tax exemptions, Net 30 orders, Settings, and each page opens.
+   - [ ] In the database, the tables `CustomerBusinessProfile`, `CustomerContact`, `TaxExemptionCertificate` and `Net30Order` exist.
+   - [ ] **FMS Plugins → Customer Profile → Net 30 orders** and **Tax exemptions** open without an error.
 3. **Settings**: put your own address in *CC on store notifications*. Save. Reopen: it stuck.
 
 ## Part 2 — Dealership and admin card
