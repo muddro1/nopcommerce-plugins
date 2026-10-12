@@ -8,3 +8,10 @@ obj/
 # Plugin packages are built at release time and attached to GitHub Releases,
 # not tracked here. See the Releases section of README.md.
 *.zip
+
+# Editor swap files
+*.swp
+
+# Estimate Builder (submodule) build defaults: ../refs for assemblies, ../output for the plugin folder
+refs/
+output/

@@ -1,15 +1,16 @@
 # nopCommerce plugins
 
-Four plugins for **nopCommerce 4.50** and **nopCommerce 4.90**, each kept here as source and as a compiled folder you can drop straight onto a server. The two builds of a plugin behave the same; they differ only in the nopCommerce version they compile against.
+Five plugins for nopCommerce. Four target both **nopCommerce 4.50** and **nopCommerce 4.90** and are kept here as source and as a compiled folder you can drop straight onto a server; the two builds of a plugin behave the same and differ only in the nopCommerce version they compile against. Estimate Builder targets 4.90 only and lives in its own repository, included here as a git submodule (see [Repository layout](#repository-layout)).
 
 | Plugin | System name | Version (4.50 / 4.90) | Does |
 |---|---|---|---|
 | [Better product search](BetterSearch/Readme.txt) | `Misc.BetterSearch` | 1.00 / 2.00 | Replaces product search with a Lucene.NET index that ranks by relevance, matches SKUs by substring and tolerates typos |
 | [Handling fee for small orders](HandlingFee/Readme.txt) | `Misc.HandlingFee` | 1.03 / 2.10 | Charges a fee on small physical orders that qualify for free shipping |
 | [Customer has only these products](HasOnlyProducts/Readme.txt) | `DiscountRequirement.HasOnlyProducts` | 1.02 / 2.00 | Discount requirement rule: the cart holds all of the listed products, or any one of them, and optionally nothing else |
+| [Estimate builder](estimate-builder/README.md) | `Misc.EstimateBuilder` | — / 1.1.0 | Customers save products and their options into named estimates, export them to Excel or PDF, or move them to the cart; admins manage every estimate and build quotes for contacts without an account |
 | [Accurate attribute combination pricing](AttributeCombinationPricing/Readme.txt) | `Misc.AttributeCombinationPricing` | 1.01 / 2.00 | Corrects the price label on an Associated-to-Product attribute value - on the product page, cart, checkout and newly placed orders - so it reflects the attribute combination's Overridden price instead of the associated product's own price |
 
-Each plugin has its own `Readme.txt` covering configuration, edge cases and upgrade steps. Read that before deploying. The summaries below only cover what you would want to know before opening one.
+Each plugin has its own `Readme.txt` (Estimate Builder: `README.md`) covering configuration, edge cases and upgrade steps. Read that before deploying. The summaries below only cover what you would want to know before opening one.
 
 ## Better product search
 
@@ -41,6 +42,12 @@ The fix has two parts: the product page's dropdown/radio labels are corrected di
 
 The fix applies automatically, store-wide, with no configuration screen. Known limitations: the label is computed once at page load against the product's default attribute state and doesn't recompute if the customer changes a different, interacting attribute afterward (doesn't currently affect any product in use); and the corrected label can be wrong on a product with an active discount or tier price, since it doesn't apply that same discount to the combination's Overridden price - see `Readme.txt` for the details and a worked example.
 
+## Estimate builder
+
+Adds "Add To Estimate" to the product page and a My Estimates area to the customer account. An estimate keeps each product with its selected attributes; customers can change quantities, export to Excel or PDF, or move everything into the cart, which reports any item the cart refuses. Admins get an Estimate Builder menu to search, edit and export every estimate, create estimates for contacts with no account and later assign them to a customer, and exclude categories from the builder.
+
+Prices come from nopCommerce's own pricing - tier, role and special prices, discounts, attribute adjustments, tax display and currency - for the estimate's owner, or at guest prices for contact-only estimates. The admin pages need *Orders. View* to look and *Orders. Create, edit, delete* to change anything, and are closed to vendors.
+
 ## Repository layout
 
 Every plugin follows the same two-folder convention inside each of its `nopCommerce 4.50/` and `nopCommerce 4.90/` directories:
@@ -63,6 +70,8 @@ The `Nop.Plugin.` prefix marks source. The same name without it is the deployabl
 
 Zips are not tracked. They duplicate the deployable folder byte for byte, and a compressed binary cannot be delta-compressed against its predecessor, so every repackage used to add a full copy to history. They are now built at release time and attached to a release instead.
 
+Estimate Builder is the exception: `estimate-builder/` is a git submodule pointing at [muddro1/estimate-builder](https://github.com/muddro1/estimate-builder), a single project folder that builds against prebuilt nopCommerce assemblies instead of sitting in a nopCommerce source tree. Clone with `git clone --recurse-submodules`, or run `git submodule update --init` in an existing clone. Its `README.md` covers building; `dotnet build -c Release -p:NopRefs=<folder with the Nop*.dll files>` writes the deployable folder to `output/` beside it, which is ignored here.
+
 `docs/superpowers/` holds the design specs and implementation plans for the handling fee and search work.
 
 ## Installing
@@ -70,7 +79,7 @@ Zips are not tracked. They duplicate the deployable folder byte for byte, and a 
 1. Download the plugin's `.zip` from [Releases](https://github.com/muddro1/nopcommerce-plugins/releases) and upload it through the admin area, or copy the plugin folder (the one without the `Nop.Plugin.` prefix) straight into `\Plugins` on the server.
 2. Go to Configuration → Local plugins and click **Reload list of plugins**.
 3. Find the plugin and click **Install**. The site restarts itself.
-4. Configure it. Discount rules attach under Promotions → Discounts → a discount → Requirements. Better product search and Handling fee for small orders get a Configure button on the plugin list; Accurate attribute combination pricing has no settings, so it has none.
+4. Configure it. Discount rules attach under Promotions → Discounts → a discount → Requirements. Better product search, Handling fee for small orders and Estimate builder get a Configure button on the plugin list; Accurate attribute combination pricing has no settings, so it has none.
 
 When upgrading over an existing install, follow the upgrade section in that plugin's `Readme.txt`. Some of them touch locale resources that need restoring in order.
 
