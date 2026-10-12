@@ -34,7 +34,11 @@ else
                     </td>
                     <td>@contact.Email</td>
                     <td>
-                        @string.Join(", ", MessageCategories.All.Where(c => contact.Categories.HasFlag(c)).Select(c => T(P + "Category." + c).Text))
+                        @* One per line so the column keeps its width however many are ticked *@
+                        @foreach (var category in MessageCategories.All.Where(c => contact.Categories.HasFlag(c)))
+                        {
+                            <div>@T(P + "Category." + category)</div>
+                        }
                     </td>
                     <td>@(contact.Active ? T("Admin.Common.Yes") : T("Admin.Common.No"))</td>
                     @if (Model.CanEdit)
