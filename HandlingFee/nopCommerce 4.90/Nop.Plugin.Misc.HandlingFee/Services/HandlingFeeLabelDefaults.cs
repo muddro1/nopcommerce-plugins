@@ -15,6 +15,13 @@ namespace Nop.Plugin.Misc.HandlingFee.Services
         public string ResourceName { get; set; }
 
         public string Value { get; set; }
+
+        /// <summary>
+        /// The language had no such resource before the label was applied, so applying created
+        /// it; restoring deletes it rather than leaving the label behind. False in backups
+        /// captured before this was tracked, which is the safe reading for them.
+        /// </summary>
+        public bool Absent { get; set; }
     }
 
     /// <summary>

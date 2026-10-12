@@ -69,7 +69,7 @@ namespace Nop.Plugin.Misc.HandlingFee
             var settings = await _settingService.LoadSettingAsync<HandlingFeeSettings>();
             if (!string.IsNullOrEmpty(settings?.LabelBackupJson))
             {
-                settings.LabelBackupJson = await _labelService.MigrateBackupAsync(settings.LabelBackupJson);
+                settings.LabelBackupJson = await _labelService.MigrateBackupAsync(settings.LabelBackupJson, settings.Label);
                 await _settingService.SaveSettingAsync(settings, x => x.LabelBackupJson, 0, false);
                 await _settingService.ClearCacheAsync();
 

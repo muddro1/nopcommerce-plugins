@@ -342,9 +342,12 @@ namespace Nop.Plugin.Misc.HandlingFee.Controllers
 
             if (!string.IsNullOrEmpty(newLabel))
             {
-                //capture the originals once, before the first overwrite, so they can be put back
-                if (string.IsNullOrEmpty(settings.LabelBackupJson))
-                    settings.LabelBackupJson = await _labelService.CaptureOriginalsAsync();
+                //capture the originals before the first overwrite, so they can be put back; on every
+                //later save, capture any language added since, while it still holds its own wording -
+                //ApplyAsync writes every language, and only backed-up pairs are ever restored
+                settings.LabelBackupJson = string.IsNullOrEmpty(settings.LabelBackupJson)
+                    ? await _labelService.CaptureOriginalsAsync()
+                    : await _labelService.MigrateBackupAsync(settings.LabelBackupJson, settings.Label);
 
                 await _labelService.ApplyAsync(newLabel);
             }

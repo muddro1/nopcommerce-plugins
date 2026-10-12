@@ -43,68 +43,27 @@ namespace Nop.Plugin.Misc.HandlingFee.Services
         public virtual async Task<string> CaptureOriginalsAsync()
         {
             var entries = new List<LabelBackupEntry>();
-
-            //showHidden: unpublished languages still render for anyone using them
-            var languages = await _languageService.GetAllLanguagesAsync(showHidden: true);
-
-            foreach (var language in languages)
-            {
-                foreach (var resourceName in HandlingFeeLabelDefaults.ManagedResources)
-                {
-                    //logIfNotFound: false — a language legitimately may not define every resource
-                    var resource = await _localizationService
-                        .GetLocaleStringResourceByNameAsync(resourceName, language.Id, false);
-
-                    if (resource == null)
-                        continue;
-
-                    entries.Add(new LabelBackupEntry
-                    {
-                        LanguageId = language.Id,
-                        ResourceName = resourceName,
-                        Value = resource.ResourceValue
-                    });
-                }
-            }
+            await CaptureMissingAsync(entries, null);
 
             return HandlingFeeLabelDefaults.SerialiseBackup(entries);
         }
 
         /// <summary>
-        /// Bring a backup captured by an earlier build in line with the resources this build
-        /// manages: drop entries for resources no longer managed, and capture the current value
-        /// of any managed resource the backup lacks. Call this before the label is applied
-        /// again, while those missing resources still hold nopCommerce's own wording.
+        /// Bring a backup in line with the resources and languages that exist now: drop entries
+        /// for resources no longer managed, and capture every (language, resource) pair the
+        /// backup lacks - a resource a newer build manages, or a language added since the
+        /// backup was taken. Call this before the label is applied again, while those pairs
+        /// still hold nopCommerce's own wording; <see cref="ApplyAsync"/> writes every language.
         /// </summary>
         /// <param name="backupJson">Previously captured originals</param>
+        /// <param name="appliedLabel">The label currently written into the resources, if any. A
+        /// missing pair already holding exactly that wording is the plugin's own, not an original,
+        /// and is never recorded as one - restoring it would put the label straight back.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains the migrated backup, serialised</returns>
-        public virtual async Task<string> MigrateBackupAsync(string backupJson)
+        public virtual async Task<string> MigrateBackupAsync(string backupJson, string appliedLabel = null)
         {
             var entries = HandlingFeeLabelDefaults.RetainManaged(HandlingFeeLabelDefaults.DeserialiseBackup(backupJson));
-
-            var languages = await _languageService.GetAllLanguagesAsync(showHidden: true);
-
-            foreach (var language in languages)
-            {
-                foreach (var resourceName in HandlingFeeLabelDefaults.ManagedResources)
-                {
-                    if (entries.Any(entry => entry.LanguageId == language.Id && entry.ResourceName == resourceName))
-                        continue;
-
-                    var resource = await _localizationService
-                        .GetLocaleStringResourceByNameAsync(resourceName, language.Id, false);
-
-                    if (resource == null)
-                        continue;
-
-                    entries.Add(new LabelBackupEntry
-                    {
-                        LanguageId = language.Id,
-                        ResourceName = resourceName,
-                        Value = resource.ResourceValue
-                    });
-                }
-            }
+            await CaptureMissingAsync(entries, appliedLabel);
 
             return HandlingFeeLabelDefaults.SerialiseBackup(entries);
         }
@@ -132,9 +91,63 @@ namespace Nop.Plugin.Misc.HandlingFee.Services
         {
             foreach (var entry in HandlingFeeLabelDefaults.DeserialiseBackup(backupJson))
             {
+                if (entry.Absent)
+                {
+                    //applying created this resource; the language had none before
+                    var created = await _localizationService.GetLocaleStringResourceByNameAsync(entry.ResourceName, entry.LanguageId, false);
+                    if (created != null)
+                        await _localizationService.DeleteLocaleStringResourceAsync(created);
+
+                    continue;
+                }
+
                 await _localizationService.AddOrUpdateLocaleResourceAsync(
                     new Dictionary<string, string> { [entry.ResourceName] = entry.Value },
                     entry.LanguageId);
+            }
+        }
+
+        #endregion
+
+        #region Utilities
+
+        /// <summary>
+        /// Add an entry for every managed (language, resource) pair not already in <paramref name="entries"/>
+        /// </summary>
+        protected virtual async Task CaptureMissingAsync(IList<LabelBackupEntry> entries, string appliedLabel)
+        {
+            var appliedValues = string.IsNullOrWhiteSpace(appliedLabel)
+                ? new Dictionary<string, string>()
+                : HandlingFeeLabelDefaults.BuildResourceValues(appliedLabel);
+
+            //showHidden: unpublished languages still render for anyone using them
+            var languages = await _languageService.GetAllLanguagesAsync(showHidden: true);
+
+            foreach (var language in languages)
+            {
+                foreach (var resourceName in HandlingFeeLabelDefaults.ManagedResources)
+                {
+                    if (entries.Any(entry => entry.LanguageId == language.Id && entry.ResourceName == resourceName))
+                        continue;
+
+                    //logIfNotFound: false - a language legitimately may not define every resource
+                    var resource = await _localizationService
+                        .GetLocaleStringResourceByNameAsync(resourceName, language.Id, false);
+
+                    //already holding the applied label: whatever was there first is gone, and
+                    //recording the label as the "original" would make it permanent
+                    if (resource != null && appliedValues.TryGetValue(resourceName, out var appliedValue)
+                        && resource.ResourceValue == appliedValue)
+                        continue;
+
+                    entries.Add(new LabelBackupEntry
+                    {
+                        LanguageId = language.Id,
+                        ResourceName = resourceName,
+                        Value = resource?.ResourceValue,
+                        Absent = resource == null
+                    });
+                }
             }
         }
 
