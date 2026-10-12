@@ -189,11 +189,14 @@ namespace Nop.Plugin.Misc.HandlingFee.Services
         /// Whether the decided fee should go through nopCommerce's currency rounding
         /// (IPriceCalculationService.RoundPriceAsync). Only a computed percentage needs it: flat
         /// and tiered fees are amounts the merchant typed, and rounding those would change what a
-        /// store upgraded from 2.00 charges.
+        /// store upgraded from 2.00 charges. Like core's own PaymentService and the totals
+        /// override, it only rounds when ShoppingCartSettings.RoundPricesDuringCalculation is on.
         /// </summary>
-        public static bool NeedsCurrencyRounding(HandlingFeeSettings settings, HandlingFeeDecision decision)
+        public static bool NeedsCurrencyRounding(HandlingFeeSettings settings, HandlingFeeDecision decision,
+            bool roundPricesDuringCalculation)
         {
-            return settings?.FeeType == HandlingFeeType.Percentage
+            return roundPricesDuringCalculation
+                && settings?.FeeType == HandlingFeeType.Percentage
                 && decision?.Reason == HandlingFeeReason.Applied
                 && decision.Fee > decimal.Zero;
         }

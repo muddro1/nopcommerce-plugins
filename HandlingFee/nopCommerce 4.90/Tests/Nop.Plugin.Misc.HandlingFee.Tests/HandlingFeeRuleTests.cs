@@ -123,12 +123,15 @@ namespace Nop.Plugin.Misc.HandlingFee.Tests
         public void Currency_rounding_is_requested_only_for_an_applied_percentage_fee()
         {
             var settings = Settings();
-            HandlingFeeRule.NeedsCurrencyRounding(settings, Evaluate(settings, Cart())).Should().BeFalse();
+            HandlingFeeRule.NeedsCurrencyRounding(settings, Evaluate(settings, Cart()), true).Should().BeFalse();
 
             settings.FeeType = HandlingFeeType.Percentage;
             settings.FeePercent = 10m;
-            HandlingFeeRule.NeedsCurrencyRounding(settings, Evaluate(settings, Cart())).Should().BeTrue();
-            HandlingFeeRule.NeedsCurrencyRounding(settings, Evaluate(settings, Cart(60m))).Should().BeFalse();
+            HandlingFeeRule.NeedsCurrencyRounding(settings, Evaluate(settings, Cart()), true).Should().BeTrue();
+            HandlingFeeRule.NeedsCurrencyRounding(settings, Evaluate(settings, Cart(60m)), true).Should().BeFalse();
+
+            //core only rounds during calculation when the store asks it to
+            HandlingFeeRule.NeedsCurrencyRounding(settings, Evaluate(settings, Cart()), false).Should().BeFalse();
         }
 
         [Test]

@@ -78,9 +78,11 @@ charge at the last step.
 
 - **Flat:** the fee amount (as today).
 - **Percentage:** percent × measured subtotal, rounded to 2 places, clamped
-  to an optional minimum and maximum, then passed through
-  `IPriceCalculationService.RoundPriceAsync` (the primary currency's rounding
-  rule). The rounding happens in the payment service and the admin preview, so
+  to an optional minimum and maximum, then - when
+  `ShoppingCartSettings.RoundPricesDuringCalculation` is on, as core requires
+  for its own rounding - passed through
+  `IPriceCalculationService.RoundPriceAsync` with no currency argument, which
+  applies the primary store currency's rounding rule. The rounding happens in the payment service and the admin preview, so
   the rule itself stays free of nopCommerce services. Because it runs after
   the clamp, a currency that rounds to 0.05 can land a fee up to one rounding
   step above the maximum. Flat and tiered fees are charged exactly as entered,

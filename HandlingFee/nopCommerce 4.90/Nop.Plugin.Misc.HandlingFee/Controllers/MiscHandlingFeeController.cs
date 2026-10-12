@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Nop.Core;
 using Nop.Core.Domain.Directory;
+using Nop.Core.Domain.Orders;
 using Nop.Plugin.Misc.HandlingFee.Models;
 using Nop.Plugin.Misc.HandlingFee.Services;
 using Nop.Services.Catalog;
@@ -52,6 +53,7 @@ namespace Nop.Plugin.Misc.HandlingFee.Controllers
         private readonly IProductModelFactory _productModelFactory;
         private readonly IProductService _productService;
         private readonly ISettingService _settingService;
+        private readonly ShoppingCartSettings _shoppingCartSettings;
         private readonly IShippingPluginManager _shippingPluginManager;
         private readonly IShippingMethodsService _shippingMethodsService;
         private readonly IStoreContext _storeContext;
@@ -73,6 +75,7 @@ namespace Nop.Plugin.Misc.HandlingFee.Controllers
             IProductModelFactory productModelFactory,
             IProductService productService,
             ISettingService settingService,
+            ShoppingCartSettings shoppingCartSettings,
             IShippingPluginManager shippingPluginManager,
             IShippingMethodsService shippingMethodsService,
             IStoreContext storeContext)
@@ -90,6 +93,7 @@ namespace Nop.Plugin.Misc.HandlingFee.Controllers
             _productModelFactory = productModelFactory;
             _productService = productService;
             _settingService = settingService;
+            _shoppingCartSettings = shoppingCartSettings;
             _shippingPluginManager = shippingPluginManager;
             _shippingMethodsService = shippingMethodsService;
             _storeContext = storeContext;
@@ -155,9 +159,9 @@ namespace Nop.Plugin.Misc.HandlingFee.Controllers
         }
 
         /// <summary>
-        /// Fill the select lists, and return the display names the rule summary needs
+        /// Fill the select lists for the configuration page
         /// </summary>
-        private async Task<HandlingFeeRuleNames> PrepareListsAsync(ConfigurationModel model)
+        private async Task PrepareListsAsync(ConfigurationModel model)
         {
             //shipping: every provider as a whole ("UPS (any service)"), then every named method
             var shippingNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -175,33 +179,65 @@ namespace Nop.Plugin.Misc.HandlingFee.Controllers
                 .Select(pair => new SelectListItem(pair.Value, pair.Key, model.SelectedShippingMethods.Contains(pair.Key)))
                 .ToList();
 
-            var countries = await _countryService.GetAllCountriesAsync(showHidden: true);
-            model.AvailableCountries = countries
+            model.AvailableCountries = (await _countryService.GetAllCountriesAsync(showHidden: true))
                 .Select(country => new SelectListItem(country.Name, country.Id.ToString(), model.SelectedCountryIds.Contains(country.Id)))
                 .ToList();
 
-            var roles = await _customerService.GetAllCustomerRolesAsync(true);
-            model.AvailableCustomerRoles = roles
+            model.AvailableCustomerRoles = (await _customerService.GetAllCustomerRolesAsync(true))
                 .Select(role => new SelectListItem(role.Name, role.Id.ToString(), model.SelectedExemptCustomerRoleIds.Contains(role.Id)))
                 .ToList();
 
             var categories = await _categoryService.GetAllCategoriesAsync(showHidden: true);
-            var categoryNames = new Dictionary<int, string>();
+            var categoryItems = new List<SelectListItem>();
             foreach (var category in categories)
-                categoryNames[category.Id] = await _categoryService.GetFormattedBreadCrumbAsync(category, categories);
-            model.AvailableCategories = categoryNames
-                .OrderBy(pair => pair.Value)
-                .Select(pair => new SelectListItem(pair.Value, pair.Key.ToString(), model.SelectedExcludedCategoryIds.Contains(pair.Key)))
-                .ToList();
+            {
+                categoryItems.Add(new SelectListItem(await _categoryService.GetFormattedBreadCrumbAsync(category, categories),
+                    category.Id.ToString(), model.SelectedExcludedCategoryIds.Contains(category.Id)));
+            }
+            model.AvailableCategories = categoryItems.OrderBy(item => item.Text).ToList();
+        }
 
-            var products = await _productService.GetProductsByIdsAsync(HandlingFeeRule.ParseIds(model.ExcludedProductIds).ToArray());
+        /// <summary>
+        /// Display names for just the identifiers the settings hold. The live preview calls this
+        /// on every edit, so it must not load whole catalogues the way the select lists do.
+        /// </summary>
+        private async Task<HandlingFeeRuleNames> GetRuleNamesAsync(HandlingFeeSettings settings)
+        {
+            var shippingNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var token in HandlingFeeRule.ParseTokens(settings.ShippingMethodsJson))
+            {
+                if (token.StartsWith(PROVIDER_PREFIX, StringComparison.OrdinalIgnoreCase))
+                {
+                    var provider = await _shippingPluginManager.LoadPluginBySystemNameAsync(token[PROVIDER_PREFIX.Length..]);
+                    shippingNames[token] = provider != null
+                        ? $"{provider.PluginDescriptor.FriendlyName} (any service)"
+                        : $"{token} (no longer available)";
+                }
+                else if (token.StartsWith(METHOD_PREFIX, StringComparison.OrdinalIgnoreCase))
+                    shippingNames[token] = token[METHOD_PREFIX.Length..];
+            }
+
+            var roles = new Dictionary<int, string>();
+            foreach (var roleId in HandlingFeeRule.ParseIds(settings.ExemptCustomerRoleIds))
+            {
+                var role = await _customerService.GetCustomerRoleByIdAsync(roleId);
+                if (role != null)
+                    roles[role.Id] = role.Name;
+            }
+
+            var categories = new Dictionary<int, string>();
+            foreach (var category in await _categoryService.GetCategoriesByIdsAsync(HandlingFeeRule.ParseIds(settings.ExcludedCategoryIds).ToArray()))
+                categories[category.Id] = await _categoryService.GetFormattedBreadCrumbAsync(category);
+
+            var countries = await _countryService.GetCountriesByIdsAsync(HandlingFeeRule.ParseIds(settings.CountryIds).ToArray());
+            var products = await _productService.GetProductsByIdsAsync(HandlingFeeRule.ParseIds(settings.ExcludedProductIds).ToArray());
 
             return new HandlingFeeRuleNames
             {
                 ShippingMethods = shippingNames,
                 Countries = countries.ToDictionary(country => country.Id, country => country.Name),
-                Roles = roles.ToDictionary(role => role.Id, role => role.Name),
-                Categories = categoryNames,
+                Roles = roles,
+                Categories = categories,
                 Products = products.ToDictionary(product => product.Id, product => product.Name)
             };
         }
@@ -346,7 +382,7 @@ namespace Nop.Plugin.Misc.HandlingFee.Controllers
             var settings = new HandlingFeeSettings();
             ApplyModel(model, settings);
 
-            var names = await PrepareListsAsync(model);
+            var names = await GetRuleNamesAsync(settings);
 
             test ??= new RulePreviewCartModel();
             var token = test.ShippingMethod ?? string.Empty;
@@ -367,7 +403,7 @@ namespace Nop.Plugin.Misc.HandlingFee.Controllers
             var decision = HandlingFeeRule.Evaluate(settings, context);
 
             //the same currency rounding the payment service applies, so the preview matches checkout
-            if (HandlingFeeRule.NeedsCurrencyRounding(settings, decision))
+            if (HandlingFeeRule.NeedsCurrencyRounding(settings, decision, _shoppingCartSettings.RoundPricesDuringCalculation))
                 decision = decision with { Fee = await _priceCalculationService.RoundPriceAsync(decision.Fee) };
             var money = await GetMoneyFormatterAsync(settings, decision);
 

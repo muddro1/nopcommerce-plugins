@@ -303,8 +303,10 @@ The Configure page is organised into cards:
       minimum and maximum; 0 means none), or Tiered bands - "subtotal up to X
       pays Y", with no fee above the highest band. For tiered fees the bands
       replace the order threshold.
-      A percentage fee is rounded the way the primary currency rounds
-      prices (for example up to the next 0.05), after the minimum and
+      When "Round prices during calculation" is on (Configuration >
+      Settings > Shopping cart settings), a percentage fee is rounded the
+      way the primary currency rounds prices (for example up to the next
+      0.05), after the minimum and
       maximum are applied - so it can end up a fraction of a rounding step
       above the maximum. Flat and tiered fees are charged exactly as
       entered.

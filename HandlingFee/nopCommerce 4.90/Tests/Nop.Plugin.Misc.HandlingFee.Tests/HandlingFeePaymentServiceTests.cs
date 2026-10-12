@@ -24,7 +24,8 @@ namespace Nop.Plugin.Misc.HandlingFee.Tests
     {
         private static HandlingFeePaymentService Build(HandlingFeeSettings settings,
             decimal subtotal, decimal? shipping, bool requiresShipping,
-            IPriceCalculationService priceCalculationService = null)
+            IPriceCalculationService priceCalculationService = null,
+            bool roundPricesDuringCalculation = false)
         {
             var totals = new Mock<IOrderTotalCalculationService>();
             totals.Setup(x => x.GetShoppingCartSubTotalAsync(It.IsAny<IList<ShoppingCartItem>>(), false))
@@ -52,7 +53,7 @@ namespace Nop.Plugin.Misc.HandlingFee.Tests
                 new Mock<IPaymentPluginManager>().Object,
                 priceCalculationService ?? new Mock<IPriceCalculationService>().Object,
                 new PaymentSettings(),
-                new ShoppingCartSettings(),
+                new ShoppingCartSettings { RoundPricesDuringCalculation = roundPricesDuringCalculation },
                 provider.Object,
                 cartService.Object,
                 settingService.Object,
@@ -108,9 +109,28 @@ namespace Nop.Plugin.Misc.HandlingFee.Tests
             settings.FeePercent = 10m;
 
             //10% of 33.35 is 3.335, which the rule takes to 3.34 and the currency to 3.35
-            var service = Build(settings, subtotal: 33.35m, shipping: 0m, requiresShipping: true, rounding.Object);
+            var service = Build(settings, subtotal: 33.35m, shipping: 0m, requiresShipping: true, rounding.Object,
+                roundPricesDuringCalculation: true);
             var fee = await service.GetAdditionalHandlingFeeAsync(new List<ShoppingCartItem>(), string.Empty);
             fee.Should().Be(3.35m);
+        }
+
+        [Test]
+        public async Task A_percentage_fee_is_not_currency_rounded_when_the_store_does_not_round_during_calculation()
+        {
+            var rounding = new Mock<IPriceCalculationService>();
+            rounding.Setup(x => x.RoundPriceAsync(It.IsAny<decimal>(), null)).ReturnsAsync(999m);
+
+            var settings = Settings();
+            settings.FeeType = HandlingFeeType.Percentage;
+            settings.FeePercent = 10m;
+
+            var service = Build(settings, subtotal: 33.35m, shipping: 0m, requiresShipping: true, rounding.Object,
+                roundPricesDuringCalculation: false);
+            var fee = await service.GetAdditionalHandlingFeeAsync(new List<ShoppingCartItem>(), string.Empty);
+
+            fee.Should().Be(3.34m);
+            rounding.Verify(x => x.RoundPriceAsync(It.IsAny<decimal>(), It.IsAny<Nop.Core.Domain.Directory.Currency>()), Times.Never);
         }
 
         [Test]
@@ -119,7 +139,8 @@ namespace Nop.Plugin.Misc.HandlingFee.Tests
             var rounding = new Mock<IPriceCalculationService>();
             rounding.Setup(x => x.RoundPriceAsync(It.IsAny<decimal>(), null)).ReturnsAsync(999m);
 
-            var service = Build(Settings(), subtotal: 30m, shipping: 0m, requiresShipping: true, rounding.Object);
+            var service = Build(Settings(), subtotal: 30m, shipping: 0m, requiresShipping: true, rounding.Object,
+                roundPricesDuringCalculation: true);
             var fee = await service.GetAdditionalHandlingFeeAsync(new List<ShoppingCartItem>(), string.Empty);
 
             fee.Should().Be(4.95m);

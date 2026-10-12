@@ -91,7 +91,9 @@ namespace Nop.Plugin.Misc.HandlingFee.Services
             var context = await _contextFactory.CreateAsync(cart, settings, orderTotalCalculationService);
 
             var decision = HandlingFeeRule.Evaluate(settings, context);
-            var handlingFee = HandlingFeeRule.NeedsCurrencyRounding(settings, decision)
+            //no currency passed: RoundPriceAsync then uses the primary store currency's rule, which
+            //is the currency every amount in the settings, and the fee itself, is held in
+            var handlingFee = HandlingFeeRule.NeedsCurrencyRounding(settings, decision, _shoppingCartSettings.RoundPricesDuringCalculation)
                 ? await _priceCalculationService.RoundPriceAsync(decision.Fee)
                 : decision.Fee;
 
