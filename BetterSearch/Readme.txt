@@ -1,6 +1,6 @@
 Better product search
 ======================
-For nopCommerce 4.50 (version 1.00) and nopCommerce 4.90 (version 2.00).
+For nopCommerce 4.50 (version 1.00) and nopCommerce 4.90 (version 2.01).
 
 Replaces nopCommerce's product search with a relevance-ranked index, built
 with Lucene.NET, that matches SKUs by substring and tolerates typos in
@@ -345,12 +345,13 @@ a matching net6.0 runtime. It is harmless, and unnecessary, on a machine
 that does have the net6.0 runtime installed.
 
 
-nopCommerce 4.90 build (version 2.00)
+nopCommerce 4.90 build (version 2.01)
 --------------------------------------
 "nopCommerce 4.90" holds a separate build for nopCommerce 4.90, next to the
 "nopCommerce 4.50" one: "Misc.BetterSearch" is the compiled plugin and
 "Nop.Plugin.Misc.BetterSearch" the source. It behaves exactly like 1.00; only
-what nopCommerce 4.90 changed underneath was ported. It is built against
+what nopCommerce 4.90 changed underneath was ported. 2.01 also lists the
+settings page under an "FMS Plugins" item in the admin menu. It is built against
 nopCommerce 4.90.8 and targets net9.0. Install it, and upgrade from an
 earlier 2.x, exactly as described above. The 4.50 build does not load on
 4.90, and the 4.90 build does not load on 4.50.
@@ -375,7 +376,7 @@ its settings and its scheduled rebuild task. Instead:
   2. Before starting the upgraded site, replace the "Misc.BetterSearch"
      folder in \Plugins with the one from "nopCommerce 4.90".
   3. Start the site. nopCommerce sees the version change from 1.00 to
-     2.00 and runs the plugin's update step, as for any upgrade above.
+     2.01 and runs the plugin's update step, as for any upgrade above.
 
 Building the 4.90 source: same steps as above, but inside a nopCommerce
 4.90 source tree. Its global.json pins SDK 9.0.100. With only a newer SDK

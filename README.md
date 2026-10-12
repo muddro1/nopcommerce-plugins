@@ -4,7 +4,7 @@ Five plugins for nopCommerce. Four target both **nopCommerce 4.50** and **nopCom
 
 | Plugin | System name | Version (4.50 / 4.90) | Does |
 |---|---|---|---|
-| [Better product search](BetterSearch/Readme.txt) | `Misc.BetterSearch` | 1.00 / 2.00 | Replaces product search with a Lucene.NET index that ranks by relevance, matches SKUs by substring and tolerates typos |
+| [Better product search](BetterSearch/Readme.txt) | `Misc.BetterSearch` | 1.00 / 2.01 | Replaces product search with a Lucene.NET index that ranks by relevance, matches SKUs by substring and tolerates typos |
 | [Handling fee for small orders](HandlingFee/Readme.txt) | `Misc.HandlingFee` | 1.03 / 2.11 | Charges a fee on small physical orders that qualify for free shipping |
 | [Customer has only these products](HasOnlyProducts/Readme.txt) | `DiscountRequirement.HasOnlyProducts` | 1.02 / 2.00 | Discount requirement rule: the cart holds all of the listed products, or any one of them, and optionally nothing else |
 | [Estimate builder](estimate-builder/README.md) | `Misc.EstimateBuilder` | — / 1.3.0 | Customers save products and their options into named estimates, export them to Excel or PDF, or move them to the cart; admins manage every estimate and build quotes for contacts without an account |
@@ -105,7 +105,7 @@ BetterSearch and HandlingFee also ship a `TESTING.md` with a manual script for a
 
 ## Releases
 
-Each plugin versions independently, under a namespaced tag: `better-search/v1.00`, `handling-fee/v1.03`, `has-only-products/v1.02`, `attribute-combination-pricing/v1.00`. The 4.90 builds start at 2.00, so a tag's major version tells you which nopCommerce it targets: 1.x for 4.50, 2.x for 4.90. Download the packaged zips from [Releases](https://github.com/muddro1/nopcommerce-plugins/releases).
+Each plugin versions independently, under a namespaced tag: `better-search/v1.00`, `handling-fee/v1.03`, `has-only-products/v1.02`, `attribute-combination-pricing/v1.00`, `estimate-builder/v1.3.0`. The 4.90 builds start at 2.00, so a tag's major version tells you which nopCommerce it targets: 1.x for 4.50, 2.x for 4.90. Download the packaged zips from [Releases](https://github.com/muddro1/nopcommerce-plugins/releases).
 
 To cut one, bump `Version` in both copies of the plugin's `plugin.json` (source and deployable folder), rebuild, copy the output over the deployable folder, then package and publish:
 
@@ -130,6 +130,8 @@ git tag -a handling-fee/v2.00 -m "Handling fee for small orders 2.00 (nopCommerc
 git push origin handling-fee/v2.00
 gh release create handling-fee/v2.00 HandlingFee/Misc.HandlingFee-4.90.zip --title "Handling fee for small orders 2.00"
 ```
+
+Estimate Builder is released the same way, from the deployable folder its own build produces (see its `README.md`), packaged as `Misc.EstimateBuilder-4.90.zip` under an `estimate-builder/v…` tag. It has no 4.50 build, so its versions don't follow the 1.x/2.x rule.
 
 `LICENSE.md` goes inside the package because the zip distributes compiled GPL v3 code and the license has to travel with it. The zip itself stays untracked.
 
