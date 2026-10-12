@@ -18,6 +18,9 @@ public interface INet30Service
     Task<IList<Net30Snapshot>> GetUnpaidSnapshotsAsync();
 
     Task<IPagedList<Net30Row>> SearchUnpaidAsync(bool overdueOnly, int pageIndex, int pageSize);
+
+    /// <summary>Daily task: emails the overdue reminder for one order, once</summary>
+    Task SendOverdueAsync(int orderId);
 }
 
 public class Net30Service : INet30Service
@@ -27,13 +30,16 @@ public class Net30Service : INet30Service
     private readonly IRepository<Customer> _customerRepository;
     private readonly IRepository<CustomerBusinessProfile> _profileRepository;
     private readonly IStoreClock _clock;
+    private readonly ICustomerProfileMessageService _messageService;
 
     public Net30Service(IRepository<Net30Order> net30Repository,
         IRepository<Order> orderRepository,
         IRepository<Customer> customerRepository,
         IRepository<CustomerBusinessProfile> profileRepository,
-        IStoreClock clock)
+        IStoreClock clock,
+        ICustomerProfileMessageService messageService)
     {
+        _messageService = messageService;
         _net30Repository = net30Repository;
         _orderRepository = orderRepository;
         _customerRepository = customerRepository;
@@ -81,5 +87,19 @@ public class Net30Service : INet30Service
             x.cu.Email, $"{x.cu.FirstName} {x.cu.LastName}".Trim(), x.cu.Company, x.Dealership)).ToList();
 
         return new PagedList<Net30Row>(rows, page.PageIndex, page.PageSize, page.TotalCount);
+    }
+
+    public async Task SendOverdueAsync(int orderId)
+    {
+        var net30 = await GetByOrderIdAsync(orderId);
+        var order = await _orderRepository.GetByIdAsync(orderId);
+        if (net30 is not { OverdueNoticeSentOnUtc: null } || order == null || order.Deleted
+            || order.PaymentStatus == PaymentStatus.Paid || order.OrderStatus == OrderStatus.Cancelled)
+            return;
+
+        // Send, then stamp: a failure in between re-sends once rather than never
+        await _messageService.SendNet30OverdueAsync(net30, order);
+        net30.OverdueNoticeSentOnUtc = _clock.UtcNow;
+        await _net30Repository.UpdateAsync(net30);
     }
 }
