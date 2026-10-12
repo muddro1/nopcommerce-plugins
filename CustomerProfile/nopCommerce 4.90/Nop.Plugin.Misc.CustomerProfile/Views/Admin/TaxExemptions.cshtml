@@ -10,6 +10,12 @@
 
 <div class="content-header clearfix">
     <h1 class="float-left">Customer Profile <small>@T(P + "Admin.TaxExemptions")</small></h1>
+    <div class="float-right">
+        <a class="btn btn-default" asp-action="Export" asp-route-filter="@Model.Filter" asp-route-dealership="@Model.Dealership"
+           asp-route-customer="@Model.Customer" title="@T(P + "Data.Export.Filtered")">
+            <i class="fas fa-file-archive"></i> @T(P + "Data.Export")
+        </a>
+    </div>
 </div>
 
 <section class="content">

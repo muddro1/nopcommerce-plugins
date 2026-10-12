@@ -95,19 +95,18 @@ public abstract class CustomerProfileSchemaBase : Migration
 [NopMigration("2026/10/12 15:37:21", "Misc.CustomerProfile schema", MigrationProcessType.Installation)]
 public class SchemaMigration : CustomerProfileSchemaBase
 {
-    public override void Up() => CreateMissingTables();
+    // A reinstall after uninstall finds the kept tables: create only what's missing, and bring old tables up to date
+    public override void Up()
+    {
+        CreateMissingTables();
+        AddMissingColumns();
+    }
 
+    /// <summary>
+    /// Runs on uninstall. Deliberately keeps the tables: they hold tax certificates that must be retained, and an
+    /// uninstall is often just a step in fixing a problem. Settings > "Delete all plugin data" removes the data.
+    /// </summary>
     public override void Down()
     {
-        // Indexes go away with their tables
-        foreach (var table in new[]
-                 {
-                     CustomerProfileDefaults.Net30OrderTable, CustomerProfileDefaults.CertificateTable,
-                     CustomerProfileDefaults.ContactTable, CustomerProfileDefaults.ProfileTable
-                 })
-        {
-            if (Schema.Table(table).Exists())
-                Delete.Table(table);
-        }
     }
 }

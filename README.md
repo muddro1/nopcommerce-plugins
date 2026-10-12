@@ -9,7 +9,7 @@ Six plugins for nopCommerce. Four target both **nopCommerce 4.50** and **nopComm
 | [Customer has only these products](HasOnlyProducts/Readme.txt) | `DiscountRequirement.HasOnlyProducts` | 1.02 / 2.00 | Discount requirement rule: the cart holds all of the listed products, or any one of them, and optionally nothing else |
 | [Estimate builder](estimate-builder/README.md) | `Misc.EstimateBuilder` | — / 1.3.0 | Customers save products and their options into named estimates, export them to Excel or PDF, or move them to the cart; admins manage every estimate and build quotes for contacts without an account |
 | [Accurate attribute combination pricing](AttributeCombinationPricing/Readme.txt) | `Misc.AttributeCombinationPricing` | 1.01 / 2.00 | Corrects the price label on an Associated-to-Product attribute value - on the product page, cart, checkout and newly placed orders - so it reflects the attribute combination's Overridden price instead of the associated product's own price |
-| [Customer profile](CustomerProfile/Readme.txt) | `Misc.CustomerProfile` | — / 1.0.2 | B2B customer details: BMW dealership, tax exemption certificates with review, expiry reminders and automatic removal, an admin-only Net 30 payment method, and additional contacts who get copies of chosen order emails |
+| [Customer profile](CustomerProfile/Readme.txt) | `Misc.CustomerProfile` | — / 1.0.3 | B2B customer details: BMW dealership, tax exemption certificates with review, expiry reminders and automatic removal, an admin-only Net 30 payment method, and additional contacts who get copies of chosen order emails |
 
 Each plugin has its own `Readme.txt` (Estimate Builder: `README.md`) covering configuration, edge cases and upgrade steps. Read that before deploying. The summaries below only cover what you would want to know before opening one.
 
@@ -54,6 +54,8 @@ Prices come from nopCommerce's own pricing - tier, role and special prices, disc
 Adds a Business profile card to the admin customer page and Business details and Tax exemption pages to My Account. Customers upload tax exemption certificates; an admin approves them with an expiration date, which ticks nopCommerce's own *Is tax exempt* flag. A schedule task emails the customer, their contacts and the store before a certificate expires, and unticks the flag the day after it does. The plugin never adds a second tax-exempt flag, so tax calculation is nopCommerce's (or the tax plugin's) as before.
 
 Net 30 is a payment method only customers you switch on can see; the order is placed unpaid with a due date and settled with *Mark as paid*. Additional contacts get their own copy of the order emails they subscribe to, which works by replacing nopCommerce's workflow message service with a subclass, so re-test contact emails after a nopCommerce upgrade. Check on staging that your tax plugin (TaxJar) honours *Is tax exempt*; `TESTING.md` part 3 covers it.
+
+Uninstalling keeps its data, tax certificates included, so a reinstall picks it up; Settings has an Export (zip) of everything and a separate "Delete all plugin data".
 
 ## Repository layout
 

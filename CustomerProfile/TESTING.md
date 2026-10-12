@@ -1,9 +1,9 @@
 # Customer profile plugin — staging test script
 
-**Plugin:** Misc.CustomerProfile 1.0.2, built against nopCommerce 4.90
+**Plugin:** Misc.CustomerProfile 1.0.3, built against nopCommerce 4.90
 **Purpose:** confirm on a real store what the automated tests could only confirm against mocks.
 
-The 42 automated tests cover the decision rules (expiry, overdue, which contacts get a copy,
+The 49 automated tests cover the decision rules (expiry, overdue, which contacts get a copy,
 upload checks) and the contact-copy mechanics against mocked nopCommerce services. Nothing
 has run against a real database, real checkout or TaxJar. This script closes that gap.
 
@@ -123,9 +123,25 @@ Check emails under **System → Message queue** rather than waiting for delivery
 8. Admin card: edit AP's categories, delete Accounts.
    - [ ] A's Business details reflects both changes.
 
-## Part 7 — Uninstall (optional, on a throwaway copy)
+## Part 7 — Export
 
-1. Uninstall.
-   - [ ] Tables `CustomerBusinessProfile`, `CustomerContact`, `TaxExemptionCertificate`, `Net30Order` gone;
-         the certificates' rows in `Download` gone; templates and schedule task gone.
-   - [ ] Customers' *Is tax exempt* values unchanged.
+1. **FMS Plugins → Customer Profile → Settings → Export (zip)**.
+   - [ ] The zip has `certificates.csv`, `business-profiles.csv`, `contacts.csv`, `net30-orders.csv` and a `certificates/` folder.
+   - [ ] Each certificate file opens; its path matches the `File` column.
+   - [ ] The CSVs open in Excel with names and dealerships readable. A dealership typed as `=1+1` shows as text, not 2.
+2. **Tax exemptions**, filter *Expired*, **Export (zip)**.
+   - [ ] `certificates.csv` and the folder hold only expired certificates.
+
+## Part 8 — Uninstall keeps the data (on a staging copy)
+
+1. Note how many rows `TaxExemptionCertificate` and `CustomerContact` have. **Uninstall** the plugin.
+   - [ ] The four tables still exist with the same row counts; the certificates' `Download` rows are still there.
+   - [ ] Message templates and the schedule task are gone.
+2. **Install** again.
+   - [ ] Customer A's card shows the same dealership, contacts and certificates; their files open.
+   - [ ] Settings are back to defaults (re-enter the CC list).
+3. Settings → **Delete all plugin data** with the box empty.
+   - [ ] "Nothing was deleted".
+4. Type `DELETE`, submit.
+   - [ ] The message gives the counts; the four tables are empty; the certificates' `Download` rows are gone.
+   - [ ] Customer A's *Is tax exempt* is unchanged.

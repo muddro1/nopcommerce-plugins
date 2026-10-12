@@ -24,6 +24,7 @@ public partial class CustomerProfileAdminController : BasePluginController
     private readonly ContactEditor _contactEditor;
     private readonly IBusinessProfileService _profileService;
     private readonly ICustomerContactService _contactService;
+    private readonly ICustomerProfileDataService _dataService;
     private readonly ICustomerService _customerService;
     private readonly ILocalizationService _localizationService;
     private readonly INet30Service _net30Service;
@@ -37,6 +38,7 @@ public partial class CustomerProfileAdminController : BasePluginController
     public CustomerProfileAdminController(ContactEditor contactEditor,
         IBusinessProfileService profileService,
         ICustomerContactService contactService,
+        ICustomerProfileDataService dataService,
         ICustomerService customerService,
         ILocalizationService localizationService,
         INet30Service net30Service,
@@ -50,6 +52,7 @@ public partial class CustomerProfileAdminController : BasePluginController
         _contactEditor = contactEditor;
         _profileService = profileService;
         _contactService = contactService;
+        _dataService = dataService;
         _customerService = customerService;
         _localizationService = localizationService;
         _net30Service = net30Service;

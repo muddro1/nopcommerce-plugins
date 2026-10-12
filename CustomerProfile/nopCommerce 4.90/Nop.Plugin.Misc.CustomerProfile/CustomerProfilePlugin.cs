@@ -4,15 +4,12 @@ using Nop.Core.Domain.Cms;
 using Nop.Core.Domain.Orders;
 using Nop.Core.Domain.Payments;
 using Nop.Core.Domain.ScheduleTasks;
-using Nop.Data;
 using Nop.Plugin.Misc.CustomerProfile.Components;
-using Nop.Plugin.Misc.CustomerProfile.Domain;
 using Nop.Plugin.Misc.CustomerProfile.Services;
 using Nop.Services.Cms;
 using Nop.Services.Configuration;
 using Nop.Services.Customers;
 using Nop.Services.Localization;
-using Nop.Services.Media;
 using Nop.Services.Payments;
 using Nop.Services.Plugins;
 using Nop.Services.ScheduleTasks;
@@ -29,9 +26,7 @@ public class CustomerProfilePlugin : BasePlugin, IWidgetPlugin, IPaymentMethod
     private readonly CustomerProfileSettings _settings;
     private readonly IBusinessProfileService _profileService;
     private readonly ICustomerService _customerService;
-    private readonly IDownloadService _downloadService;
     private readonly ILocalizationService _localizationService;
-    private readonly IRepository<TaxExemptionCertificate> _certificateRepository;
     private readonly IScheduleTaskService _scheduleTaskService;
     private readonly ISettingService _settingService;
     private readonly IWebHelper _webHelper;
@@ -43,9 +38,7 @@ public class CustomerProfilePlugin : BasePlugin, IWidgetPlugin, IPaymentMethod
     public CustomerProfilePlugin(CustomerProfileSettings settings,
         IBusinessProfileService profileService,
         ICustomerService customerService,
-        IDownloadService downloadService,
         ILocalizationService localizationService,
-        IRepository<TaxExemptionCertificate> certificateRepository,
         IScheduleTaskService scheduleTaskService,
         ISettingService settingService,
         IWebHelper webHelper,
@@ -57,9 +50,7 @@ public class CustomerProfilePlugin : BasePlugin, IWidgetPlugin, IPaymentMethod
         _settings = settings;
         _profileService = profileService;
         _customerService = customerService;
-        _downloadService = downloadService;
         _localizationService = localizationService;
-        _certificateRepository = certificateRepository;
         _scheduleTaskService = scheduleTaskService;
         _settingService = settingService;
         _webHelper = webHelper;
@@ -117,15 +108,8 @@ public class CustomerProfilePlugin : BasePlugin, IWidgetPlugin, IPaymentMethod
 
     public override async Task UninstallAsync()
     {
-        // Certificate files live in the core Download table; remove them while the certificate table still exists
-        var downloadIds = _certificateRepository.Table.Select(c => c.DownloadId).ToList();
-        foreach (var downloadId in downloadIds)
-        {
-            var download = await _downloadService.GetDownloadByIdAsync(downloadId);
-            if (download != null)
-                await _downloadService.DeleteDownloadAsync(download);
-        }
-
+        // The plugin's tables and certificate files are kept (SchemaMigration.Down) so a reinstall picks them up again.
+        // Settings > "Delete all plugin data" is the way to remove them.
         var task = await _scheduleTaskService.GetTaskByTypeAsync(CustomerProfileDefaults.DailyTaskType);
         if (task != null)
             await _scheduleTaskService.DeleteTaskAsync(task);
@@ -140,7 +124,6 @@ public class CustomerProfilePlugin : BasePlugin, IWidgetPlugin, IPaymentMethod
         if (_paymentSettings.ActivePaymentMethodSystemNames.Remove(CustomerProfileDefaults.SystemName))
             await _settingService.SaveSettingAsync(_paymentSettings);
 
-        // Customers' IsTaxExempt values are left as they are
         await base.UninstallAsync();
     }
 

@@ -11,7 +11,7 @@ public class EnsureSchemaMigration : CustomerProfileSchemaBase
 {
     public override void Up() => CreateMissingTables();
 
-    // SchemaMigration.Down drops the tables on uninstall
+    // Uninstall keeps the data (see SchemaMigration.Down)
     public override void Down()
     {
     }

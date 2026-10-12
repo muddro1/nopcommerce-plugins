@@ -1,6 +1,6 @@
 Customer profile
 ================
-For nopCommerce 4.90 (version 1.0.2).
+For nopCommerce 4.90 (version 1.0.3).
 
 Extends the customer record for B2B customers:
 
@@ -150,7 +150,7 @@ conflict with this one.
 Upgrading
 ---------
 Upload the new version over the installed one (Local plugins > Upload plugin
-or theme) and restart. Don't uninstall first: that deletes every certificate.
+or theme) and restart.
 
 1.0.2 adds one column to TaxExemptionCertificate, created on upgrade.
 
@@ -167,13 +167,43 @@ records a migration that makes Estimate Builder's later upgrade skip adding
 its Note column.
 
 
-Uninstalling
-------------
-Deletes the plugin's tables - dealerships, Net 30 settings and due dates,
-contacts, and every tax exemption certificate including the files - plus
-its settings, message templates and schedule task. Customers' "Is tax
-exempt" values and Net 30 orders themselves are left as they are.
-Download any certificates you need to keep first.
+Backing up, exporting and deleting the data
+-------------------------------------------
+Everything the plugin stores is in the store's database, certificate files
+included (nopCommerce's Download table), so the store's normal SQL Server
+backup covers it.
+
+Export: FMS Plugins > Customer Profile > Settings > "Export (zip)", or the
+"Export (zip)" button on Tax exemptions, which follows that page's filter.
+The zip holds:
+
+  certificates.csv        One row per certificate: customer, dealership,
+                          status, dates, number, review note, file path
+  certificates/<customer id>/<certificate id>-<file name>
+                          The certificate files themselves
+  business-profiles.csv   Dealership and Net 30 per customer (always all)
+  contacts.csv            Every additional contact (always all)
+  net30-orders.csv        Every Net 30 order with due date and payment
+                          status (always all)
+
+The CSV files open in Excel. Exporting needs "Customers. View".
+
+Uninstalling (1.0.3 and later) keeps the data: the plugin's four tables and
+the certificate files stay in the database, and reinstalling picks them up
+again. Uninstall still removes the settings, message templates, schedule
+task and texts, which reinstalling recreates with defaults (re-enter the CC
+list).
+
+To remove the data for good: Settings > "Delete all plugin data", typing
+DELETE to confirm. It deletes every certificate and file, dealership, Net 30
+setting, contact and Net 30 due date. Customers, orders and "Is tax exempt"
+are not changed. Export first if you need any of it. The empty tables stay
+until you drop them in SQL after uninstalling:
+
+  DROP TABLE Net30Order, TaxExemptionCertificate, CustomerContact,
+             CustomerBusinessProfile;
+
+Versions 1.0.0 to 1.0.2 deleted all the data on uninstall.
 
 
 Known limitations

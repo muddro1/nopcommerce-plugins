@@ -87,3 +87,32 @@
         </div>
     </section>
 </form>
+
+<section class="content">
+    <div class="container-fluid">
+        <div class="card card-default">
+            <div class="card-header"><h3 class="card-title">@T(CustomerProfileDefaults.LocalePrefix + "Data")</h3></div>
+            <div class="card-body">
+                <p>@T(CustomerProfileDefaults.LocalePrefix + "Data.KeptOnUninstall")</p>
+
+                <p>
+                    <a class="btn btn-default" asp-action="Export" asp-route-filter="All">
+                        <i class="fas fa-file-archive"></i> @T(CustomerProfileDefaults.LocalePrefix + "Data.Export")
+                    </a>
+                    <br /><small class="text-muted">@T(CustomerProfileDefaults.LocalePrefix + "Data.Export.Hint")</small>
+                </p>
+
+                <hr />
+                @* A separate form: the settings form above posts to Configure *@
+                <form asp-action="DeleteAllData" method="post" class="form-inline">
+                    <input type="text" name="confirmation" class="form-control mr-2" autocomplete="off" style="max-width: 140px"
+                           placeholder="@Nop.Plugin.Misc.CustomerProfile.Controllers.CustomerProfileAdminController.DeleteConfirmationWord" />
+                    <button type="submit" class="btn btn-danger">
+                        <i class="far fa-trash-alt"></i> @T(CustomerProfileDefaults.LocalePrefix + "Data.Delete")
+                    </button>
+                </form>
+                <small class="text-muted">@string.Format(T(CustomerProfileDefaults.LocalePrefix + "Data.Delete.Hint").Text, Nop.Plugin.Misc.CustomerProfile.Controllers.CustomerProfileAdminController.DeleteConfirmationWord)</small>
+            </div>
+        </div>
+    </div>
+</section>

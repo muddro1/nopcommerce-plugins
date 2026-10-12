@@ -12,7 +12,7 @@ public class AddExemptionRemovedMigration : CustomerProfileSchemaBase
         AddMissingColumns();
     }
 
-    // SchemaMigration.Down drops the tables on uninstall
+    // Uninstall keeps the data (see SchemaMigration.Down)
     public override void Down()
     {
     }
