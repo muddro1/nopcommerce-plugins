@@ -7,7 +7,7 @@ Five plugins for nopCommerce. Four target both **nopCommerce 4.50** and **nopCom
 | [Better product search](BetterSearch/Readme.txt) | `Misc.BetterSearch` | 1.00 / 2.00 | Replaces product search with a Lucene.NET index that ranks by relevance, matches SKUs by substring and tolerates typos |
 | [Handling fee for small orders](HandlingFee/Readme.txt) | `Misc.HandlingFee` | 1.03 / 2.10 | Charges a fee on small physical orders that qualify for free shipping |
 | [Customer has only these products](HasOnlyProducts/Readme.txt) | `DiscountRequirement.HasOnlyProducts` | 1.02 / 2.00 | Discount requirement rule: the cart holds all of the listed products, or any one of them, and optionally nothing else |
-| [Estimate builder](estimate-builder/README.md) | `Misc.EstimateBuilder` | — / 1.1.0 | Customers save products and their options into named estimates, export them to Excel or PDF, or move them to the cart; admins manage every estimate and build quotes for contacts without an account |
+| [Estimate builder](estimate-builder/README.md) | `Misc.EstimateBuilder` | — / 1.2.0 | Customers save products and their options into named estimates, export them to Excel or PDF, or move them to the cart; admins manage every estimate and build quotes for contacts without an account |
 | [Accurate attribute combination pricing](AttributeCombinationPricing/Readme.txt) | `Misc.AttributeCombinationPricing` | 1.01 / 2.00 | Corrects the price label on an Associated-to-Product attribute value - on the product page, cart, checkout and newly placed orders - so it reflects the attribute combination's Overridden price instead of the associated product's own price |
 
 Each plugin has its own `Readme.txt` (Estimate Builder: `README.md`) covering configuration, edge cases and upgrade steps. Read that before deploying. The summaries below only cover what you would want to know before opening one.
@@ -44,7 +44,7 @@ The fix applies automatically, store-wide, with no configuration screen. Known l
 
 ## Estimate builder
 
-Adds "Add To Estimate" to the product page and a My Estimates area to the customer account. An estimate keeps each product with its selected attributes; customers can change quantities, export to Excel or PDF, or move everything into the cart, which reports any item the cart refuses. Admins get an Estimate Builder menu to search, edit and export every estimate, create estimates for contacts with no account and later assign them to a customer, and exclude categories from the builder.
+Adds "Add To Estimate" to the product page and a My Estimates area to the customer account. An estimate keeps each product with its selected attributes; customers can change quantities, export to Excel or PDF, or move everything into the cart, which reports any item the cart refuses. Admins get an Estimate Builder menu to search, edit and export every estimate, create estimates for contacts with no account and later assign them to a customer, add notes that print under the export totals, and exclude categories from the builder.
 
 Prices come from nopCommerce's own pricing - tier, role and special prices, discounts, attribute adjustments, tax display and currency - for the estimate's owner, or at guest prices for contact-only estimates. The admin pages need *Orders. View* to look and *Orders. Create, edit, delete* to change anything, and are closed to vendors.
 
