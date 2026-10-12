@@ -79,7 +79,7 @@ Estimate Builder is the exception: `estimate-builder/` is a git submodule pointi
 1. Download the plugin's `.zip` from [Releases](https://github.com/muddro1/nopcommerce-plugins/releases) and upload it through the admin area, or copy the plugin folder (the one without the `Nop.Plugin.` prefix) straight into `\Plugins` on the server.
 2. Go to Configuration → Local plugins and click **Reload list of plugins**.
 3. Find the plugin and click **Install**. The site restarts itself.
-4. Configure it. Discount rules attach under Promotions → Discounts → a discount → Requirements. Better product search, Handling fee for small orders and Estimate builder get a Configure button on the plugin list, and their 4.90 builds also list their settings pages under an **FMS Plugins** item in the admin menu (shown to admins with *Manage plugins*); Accurate attribute combination pricing has no settings, so it has none.
+4. Configure it. Discount rules attach under Promotions → Discounts → a discount → Requirements. Better product search, Handling fee for small orders and Estimate builder get a Configure button on the plugin list, and their 4.90 builds also list their settings pages under an **FMS Plugins** item in the admin menu (shown to admins with *Manage plugins*). Estimate builder's entry there is a group that also holds All Estimates and New Estimate; Accurate attribute combination pricing has no settings, so it has none.
 
 When upgrading over an existing install, follow the upgrade section in that plugin's `Readme.txt`. Some of them touch locale resources that need restoring in order.
 
