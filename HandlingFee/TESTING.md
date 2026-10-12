@@ -309,6 +309,68 @@ changing to measure inclusive of tax.
 
 ---
 
+## Part 7 — Rule options (2.10, nopCommerce 4.90 build only)
+
+Skip this part when testing the 4.50 build. Start from the Part 1 configuration
+(threshold 50.00, fee 4.95, flat) and change **one** setting at a time, putting
+it back before the next row.
+
+### 7.1 Upgrade check — do this first
+
+Before touching any new setting, open the Configure page on a store that ran
+2.00. Every new field must show its default: fee type **Flat amount**, measure
+subtotal **After discounts**, **Require a shipped item** ticked, no shipping
+methods / countries / roles / categories / products selected, exclusions
+**Waive the fee**. Then re-run three Part 2 orders (free shipping below the
+threshold, above the threshold, paid shipping). The fees must match Part 2
+exactly.
+
+### 7.2 The rule summary and tester
+
+The **Rule summary** card at the top should read, for the Part 1 settings:
+
+> Charge $4.95 when an order with at least one shipped item has a subtotal
+> (after discounts) of $50.00 or less and ships for free.
+
+Change the fee amount without saving: the sentence must update within about a
+second. In **Try a cart**, set subtotal 60.00: the result must read "No fee:
+the measured subtotal of $60.00 is above the limit." Leave the page without
+saving and reopen it. Nothing you typed should have been stored.
+
+### 7.3 One setting at a time
+
+| Change | Cart to place | Expected fee |
+|---|---|---|
+| Fee type **Percentage**, 10%, minimum 2.00, maximum 4.00 | Physical, subtotal 30.00, free shipping | 3.00 |
+| (same) | Physical, subtotal 12.00, free shipping | 2.00 (minimum) |
+| (same) | Physical, subtotal 45.00, free shipping | 4.00 (maximum) |
+| Fee type **Tiered**: up to 25 → 5.95, up to 50 → 3.95 | Subtotal 20.00, free shipping | 5.95 |
+| (same) | Subtotal 25.00 exactly | 5.95 |
+| (same) | Subtotal 40.00 | 3.95 |
+| (same) | Subtotal 60.00 | none |
+| **Measure subtotal: Before order discounts**, plus an order-subtotal discount of 15.00 | Items worth 60.00, discounted to 45.00 | none (60 is measured) |
+| Untick **Require a shipped item** | Downloadable only, subtotal 30.00 | 4.95 |
+| **Only these shipping methods**: your free method | Cart page, before choosing shipping | 4.95 shown |
+| (same) | Choose the free method at checkout | 4.95 |
+| (same), with **No fee when shipping is charged** unticked | Choose a paid UPS/FedEx upgrade | none (method not included) |
+| **Only these countries**: United States | Ship to a Canadian address | none |
+| **Exempt customer roles**: a test role you add yourself to | Physical, 30.00, free shipping | none |
+| **Excluded categories**: Gift Cards, mode **Waive the fee** | Gift card + physical item, total 30.00 | none |
+| (same), mode **Leave them out** | Gift card 25.00 + physical item 20.00, free shipping | 4.95 (only 20.00 measured) |
+| (same), mode **Leave them out** | Gift card only (not shipped) | none (nothing left that ships) |
+| **Excluded products**: pick one with **Choose products** | That product + another, 30.00 | none |
+
+For each row, the **Try a cart** tester given the same inputs must agree with
+the real cart.
+
+### 7.4 Validation
+
+Each of these must be refused on Save with a message, without changing what
+is stored: percentage 150; maximum 2.00 below minimum 3.00; Tiered with no
+bands; two bands with the same limit; a band with fee 0.
+
+---
+
 ## Sign-off
 
 | Check | Pass |
