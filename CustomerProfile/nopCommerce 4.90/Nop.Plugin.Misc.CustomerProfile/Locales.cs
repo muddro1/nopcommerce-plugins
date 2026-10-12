@@ -68,6 +68,8 @@ public static class Locales
         [P + "TaxExemption.Banner.Expiring"] = "Your tax exemption certificate expires on {0}. Upload a new one to keep tax-exempt pricing.",
         [P + "TaxExemption.Banner.Expired"] = "Your tax exemption certificate expired on {0}. Upload a new one to restore tax-exempt pricing.",
         [P + "TaxExemption.Banner.Link"] = "Upload certificate",
+        [P + "TaxExemption.Owner.ExemptionRemoved"] = "Tax exemption was removed from the account automatically.",
+        [P + "TaxExemption.Owner.ExemptionKept"] = "Tax exemption was left on: the customer has another valid certificate, or automatic removal is turned off.",
         [P + "TaxExemption.AdminComment"] = "{0}: tax exemption removed automatically, certificate #{1} expired {2}.",
 
         [P + "BusinessDetails"] = "Business details",

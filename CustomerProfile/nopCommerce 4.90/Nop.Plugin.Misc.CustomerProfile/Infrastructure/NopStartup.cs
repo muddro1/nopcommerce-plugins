@@ -22,6 +22,7 @@ public class NopStartup : INopStartup
         services.AddScoped<INet30Service, Net30Service>();
         services.AddScoped<MessageTemplateInstaller>();
         services.AddScoped<ContactEditor>();
+        services.AddScoped<ICustomerProfileMessageService, CustomerProfileMessageService>();
 
         // Replaces core's registration (Nop.Web.Framework NopStartup, order 2000) to copy customer emails to contacts
         services.AddScoped<IWorkflowMessageService, CustomerProfileWorkflowMessageService>();
