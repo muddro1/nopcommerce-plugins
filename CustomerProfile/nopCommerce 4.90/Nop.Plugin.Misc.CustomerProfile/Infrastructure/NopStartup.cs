@@ -19,6 +19,7 @@ public class NopStartup : INopStartup
         services.AddScoped<ICustomerContactService, CustomerContactService>();
         services.AddScoped<ITaxExemptionService, TaxExemptionService>();
         services.AddScoped<INet30Service, Net30Service>();
+        services.AddScoped<MessageTemplateInstaller>();
     }
 
     public void Configure(IApplicationBuilder application)
