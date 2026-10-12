@@ -29,17 +29,25 @@ namespace Nop.Plugin.Misc.HandlingFee.Services
     {
         public const string CART_TOTALS = "ShoppingCart.Totals.PaymentMethodAdditionalFee";
         public const string ORDER_DETAILS = "Order.PaymentMethodAdditionalFee";
-        public const string PDF_INVOICE = "PDFInvoice.PaymentMethodAdditionalFee";
+        public const string PDF_INVOICE = "Pdf.PaymentMethodAdditionalFee";
         public const string ORDER_EMAIL = "Messages.Order.PaymentMethodAdditionalFee";
         public const string ADMIN_ORDER = "Admin.Orders.Fields.PaymentMethodAdditionalFee";
         public const string ADMIN_ORDER_EDIT = "Admin.Orders.Fields.Edit.PaymentMethodAdditionalFee";
 
         /// <summary>
-        /// These two carry the trailing colon inside the resource value itself, because the
-        /// PDF and email builders do not add one. The other four are rendered by views that
-        /// supply their own colon, so adding one here would double it.
+        /// The 4.50 PDF invoice resource. nopCommerce 4.60 replaced it with <see cref="PDF_INVOICE"/>
+        /// and its upgrade migration deletes it, so nothing reads it any more. Backups captured
+        /// by the 4.50 build still hold it.
         /// </summary>
-        private static readonly string[] _resourcesCarryingTheirOwnColon = { PDF_INVOICE, ORDER_EMAIL };
+        public const string LEGACY_PDF_INVOICE = "PDFInvoice.PaymentMethodAdditionalFee";
+
+        /// <summary>
+        /// Only the email carries the trailing colon inside the resource value itself, because
+        /// the email builder does not add one. The other five are rendered by views or by the
+        /// PDF builder (PdfDocument.BuildTextCell), which supply their own colon, so adding one
+        /// here would double it.
+        /// </summary>
+        private static readonly string[] _resourcesCarryingTheirOwnColon = { ORDER_EMAIL };
 
         /// <summary>
         /// Every resource this plugin will overwrite when a custom label is set.
@@ -79,6 +87,18 @@ namespace Nop.Plugin.Misc.HandlingFee.Services
         public static string SerialiseBackup(IEnumerable<LabelBackupEntry> entries)
         {
             return JsonSerializer.Serialize(entries ?? Enumerable.Empty<LabelBackupEntry>());
+        }
+
+        /// <summary>
+        /// Drop backup entries for resources this plugin no longer manages, such as
+        /// <see cref="LEGACY_PDF_INVOICE"/> in a backup captured by the 4.50 build. Restoring
+        /// those would recreate a resource that nopCommerce deliberately deleted.
+        /// </summary>
+        public static IList<LabelBackupEntry> RetainManaged(IEnumerable<LabelBackupEntry> entries)
+        {
+            return (entries ?? Enumerable.Empty<LabelBackupEntry>())
+                .Where(entry => ManagedResources.Contains(entry.ResourceName))
+                .ToList();
         }
 
         /// <summary>

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Nop.Services.Localization;
 
@@ -51,6 +52,45 @@ namespace Nop.Plugin.Misc.HandlingFee.Services
                 foreach (var resourceName in HandlingFeeLabelDefaults.ManagedResources)
                 {
                     //logIfNotFound: false — a language legitimately may not define every resource
+                    var resource = await _localizationService
+                        .GetLocaleStringResourceByNameAsync(resourceName, language.Id, false);
+
+                    if (resource == null)
+                        continue;
+
+                    entries.Add(new LabelBackupEntry
+                    {
+                        LanguageId = language.Id,
+                        ResourceName = resourceName,
+                        Value = resource.ResourceValue
+                    });
+                }
+            }
+
+            return HandlingFeeLabelDefaults.SerialiseBackup(entries);
+        }
+
+        /// <summary>
+        /// Bring a backup captured by an earlier build in line with the resources this build
+        /// manages: drop entries for resources no longer managed, and capture the current value
+        /// of any managed resource the backup lacks. Call this before the label is applied
+        /// again, while those missing resources still hold nopCommerce's own wording.
+        /// </summary>
+        /// <param name="backupJson">Previously captured originals</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains the migrated backup, serialised</returns>
+        public virtual async Task<string> MigrateBackupAsync(string backupJson)
+        {
+            var entries = HandlingFeeLabelDefaults.RetainManaged(HandlingFeeLabelDefaults.DeserialiseBackup(backupJson));
+
+            var languages = await _languageService.GetAllLanguagesAsync(showHidden: true);
+
+            foreach (var language in languages)
+            {
+                foreach (var resourceName in HandlingFeeLabelDefaults.ManagedResources)
+                {
+                    if (entries.Any(entry => entry.LanguageId == language.Id && entry.ResourceName == resourceName))
+                        continue;
+
                     var resource = await _localizationService
                         .GetLocaleStringResourceByNameAsync(resourceName, language.Id, false);
 

@@ -274,6 +274,17 @@ difference remains the deliberately dropped payment-method guard. The
 payment-method additional-fee channel the fee rides on is also unchanged
 in 4.90.
 
+The one resource that did change is the PDF invoice label. nopCommerce
+4.60 replaced "PDFInvoice.PaymentMethodAdditionalFee" with
+"Pdf.PaymentMethodAdditionalFee", and its upgrade deletes the old one, so
+the 4.90 build writes a custom label into the new resource instead. The
+4.90 PDF builder adds its own colon after the label, so that resource
+holds the label without one. When a store with a custom label is upgraded
+from 1.03, the update step backs up the new resource's original wording
+before writing the label into it, and drops the old resource from the
+backup. Clearing the label or uninstalling then restores the 4.90 wording
+and does not bring back the deleted resource.
+
 Moving a store from nopCommerce 4.50 to 4.90 with this plugin installed:
 Do NOT uninstall the 1.03 build first - uninstalling deletes
 its settings and its locale resources. Instead:

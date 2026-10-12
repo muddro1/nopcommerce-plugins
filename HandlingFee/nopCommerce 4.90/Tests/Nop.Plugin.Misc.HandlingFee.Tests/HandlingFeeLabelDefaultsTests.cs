@@ -15,7 +15,7 @@ namespace Nop.Plugin.Misc.HandlingFee.Tests
             {
                 "ShoppingCart.Totals.PaymentMethodAdditionalFee",
                 "Order.PaymentMethodAdditionalFee",
-                "PDFInvoice.PaymentMethodAdditionalFee",
+                "Pdf.PaymentMethodAdditionalFee",
                 "Messages.Order.PaymentMethodAdditionalFee",
                 "Admin.Orders.Fields.PaymentMethodAdditionalFee",
                 "Admin.Orders.Fields.Edit.PaymentMethodAdditionalFee"
@@ -31,17 +31,46 @@ namespace Nop.Plugin.Misc.HandlingFee.Tests
             values["Order.PaymentMethodAdditionalFee"].Should().Be("Small Order Handling Charge");
             values["Admin.Orders.Fields.PaymentMethodAdditionalFee"].Should().Be("Small Order Handling Charge");
             values["Admin.Orders.Fields.Edit.PaymentMethodAdditionalFee"].Should().Be("Small Order Handling Charge");
+
+            //the 4.90 PDF builder appends its own colon after the label
+            values["Pdf.PaymentMethodAdditionalFee"].Should().Be("Small Order Handling Charge");
         }
 
         [Test]
-        public void Invoice_and_email_resources_get_a_trailing_colon()
+        public void Email_resource_gets_a_trailing_colon()
         {
-            //the PDF invoice and email templates carry the colon inside the resource value;
-            //the views that render them do not supply one
+            //the email template carries the colon inside the resource value;
+            //the code that renders it does not supply one
             var values = HandlingFeeLabelDefaults.BuildResourceValues("Small Order Handling Charge");
 
-            values["PDFInvoice.PaymentMethodAdditionalFee"].Should().Be("Small Order Handling Charge:");
             values["Messages.Order.PaymentMethodAdditionalFee"].Should().Be("Small Order Handling Charge:");
+        }
+
+        [Test]
+        public void The_legacy_4_50_pdf_resource_is_not_managed()
+        {
+            HandlingFeeLabelDefaults.ManagedResources.Should().NotContain("PDFInvoice.PaymentMethodAdditionalFee");
+        }
+
+        [Test]
+        public void Migrating_a_backup_drops_resources_no_longer_managed()
+        {
+            var entries = new[]
+            {
+                new LabelBackupEntry { LanguageId = 1, ResourceName = "Order.PaymentMethodAdditionalFee", Value = "Payment method additional fee" },
+                new LabelBackupEntry { LanguageId = 1, ResourceName = "PDFInvoice.PaymentMethodAdditionalFee", Value = "Payment method additional fee:" }
+            };
+
+            var retained = HandlingFeeLabelDefaults.RetainManaged(entries);
+
+            retained.Should().ContainSingle()
+                .Which.ResourceName.Should().Be("Order.PaymentMethodAdditionalFee");
+        }
+
+        [Test]
+        public void Migrating_a_missing_backup_yields_an_empty_list()
+        {
+            HandlingFeeLabelDefaults.RetainManaged(null).Should().BeEmpty();
         }
 
         [Test]
@@ -49,7 +78,7 @@ namespace Nop.Plugin.Misc.HandlingFee.Tests
         {
             var values = HandlingFeeLabelDefaults.BuildResourceValues("Small Order Handling Charge:");
 
-            values["PDFInvoice.PaymentMethodAdditionalFee"].Should().Be("Small Order Handling Charge:");
+            values["Messages.Order.PaymentMethodAdditionalFee"].Should().Be("Small Order Handling Charge:");
             values["ShoppingCart.Totals.PaymentMethodAdditionalFee"].Should().Be("Small Order Handling Charge");
         }
 
@@ -59,7 +88,7 @@ namespace Nop.Plugin.Misc.HandlingFee.Tests
             var values = HandlingFeeLabelDefaults.BuildResourceValues("  Small Order Handling Charge  ");
 
             values["ShoppingCart.Totals.PaymentMethodAdditionalFee"].Should().Be("Small Order Handling Charge");
-            values["PDFInvoice.PaymentMethodAdditionalFee"].Should().Be("Small Order Handling Charge:");
+            values["Messages.Order.PaymentMethodAdditionalFee"].Should().Be("Small Order Handling Charge:");
         }
 
         [Test]
@@ -77,7 +106,7 @@ namespace Nop.Plugin.Misc.HandlingFee.Tests
             var entries = new[]
             {
                 new LabelBackupEntry { LanguageId = 1, ResourceName = "Order.PaymentMethodAdditionalFee", Value = "Payment method additional fee" },
-                new LabelBackupEntry { LanguageId = 2, ResourceName = "PDFInvoice.PaymentMethodAdditionalFee", Value = "Frais:" }
+                new LabelBackupEntry { LanguageId = 2, ResourceName = "Messages.Order.PaymentMethodAdditionalFee", Value = "Frais:" }
             };
 
             var restored = HandlingFeeLabelDefaults.DeserialiseBackup(HandlingFeeLabelDefaults.SerialiseBackup(entries));

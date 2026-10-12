@@ -63,6 +63,20 @@ namespace Nop.Plugin.Misc.HandlingFee
             //an earlier one, so re-register them all on every upgrade
             await AddOrUpdateLocalesAsync();
 
+            //a label set under an earlier build was written into the resources that build
+            //managed. Migrate the backup first, so the originals of any newly managed resource
+            //(the 4.90 PDF invoice label) are captured before the label is applied over them
+            var settings = await _settingService.LoadSettingAsync<HandlingFeeSettings>();
+            if (!string.IsNullOrEmpty(settings?.LabelBackupJson))
+            {
+                settings.LabelBackupJson = await _labelService.MigrateBackupAsync(settings.LabelBackupJson);
+                await _settingService.SaveSettingAsync(settings, x => x.LabelBackupJson, 0, false);
+                await _settingService.ClearCacheAsync();
+
+                if (!string.IsNullOrEmpty(settings.Label))
+                    await _labelService.ApplyAsync(settings.Label);
+            }
+
             await base.UpdateAsync(currentVersion, targetVersion);
         }
 
