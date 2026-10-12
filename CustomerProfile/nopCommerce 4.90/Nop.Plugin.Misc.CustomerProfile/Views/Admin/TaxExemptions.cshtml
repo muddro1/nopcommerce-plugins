@@ -1,0 +1,72 @@
+@model TaxExemptionsModel
+@inject Nop.Services.Helpers.IDateTimeHelper DateTimeHelper
+@using Nop.Plugin.Misc.CustomerProfile.Services
+@{
+    Layout = "_AdminLayout";
+    NopHtml.SetActiveMenuItemSystemName(CustomerProfileDefaults.MenuTaxExemptions);
+    const string P = CustomerProfileDefaults.LocalePrefix;
+    ViewBag.Title = T(P + "Admin.TaxExemptions").Text;
+}
+
+<div class="content-header clearfix">
+    <h1 class="float-left">Customer Profile <small>@T(P + "Admin.TaxExemptions")</small></h1>
+</div>
+
+<section class="content">
+    <div class="container-fluid">
+        <div class="card card-default">
+            <div class="card-body">
+                <form method="get" asp-action="TaxExemptions" class="form-inline mb-3">
+                    <label class="mr-2" for="filter">@T(P + "Admin.Filter")</label>
+                    <select class="form-control form-control-sm mr-3" id="filter" name="filter">
+                        @foreach (var filter in Enum.GetValues<CertificateFilter>())
+                        {
+                            <option value="@filter" selected="@(filter == Model.Filter)">@T(P + "Admin.Filter." + filter)</option>
+                        }
+                    </select>
+                    <input class="form-control form-control-sm mr-2" name="customer" value="@Model.Customer" placeholder="@T(P + "Admin.Customer")" />
+                    <input class="form-control form-control-sm mr-2" name="dealership" value="@Model.Dealership" placeholder="@T(P + "Dealership")" />
+                    <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search"></i> @T(P + "Admin.Search")</button>
+                </form>
+
+                @if (!Model.Rows.Any())
+                {
+                    <p class="text-muted">@T("Admin.Common.NoData")</p>
+                }
+                else
+                {
+                    <table class="table table-bordered table-hover table-striped">
+                        <thead>
+                            <tr>
+                                <th>@T(P + "Admin.Customer")</th>
+                                <th>@T(P + "Dealership")</th>
+                                <th>@T(P + "TaxExemption.State")</th>
+                                <th>@T(P + "TaxExemption.ExpiresOn")</th>
+                                <th>@T(P + "TaxExemption.UploadedOn")</th>
+                                <th>@T(P + "TaxExemption.UploadedBy")</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var row in Model.Rows)
+                            {
+                                var cert = row.Certificate;
+                                <tr>
+                                    <td>
+                                        <a asp-controller="Customer" asp-action="Edit" asp-route-id="@cert.CustomerId">@(string.IsNullOrEmpty(row.CustomerName) ? row.CustomerEmail : row.CustomerName)</a>
+                                        <br /><small class="text-muted">@row.CustomerEmail @(string.IsNullOrEmpty(row.Company) ? "" : "· " + row.Company)</small>
+                                    </td>
+                                    <td>@row.Dealership</td>
+                                    <td>@T(P + "TaxExemption.State." + cert.State)</td>
+                                    <td>@cert.ExpiresOn?.ToShortDateString()</td>
+                                    <td>@((await DateTimeHelper.ConvertToUserTimeAsync(cert.UploadedOnUtc, DateTimeKind.Utc)).ToShortDateString())</td>
+                                    <td>@(cert.UploadedByCustomerId == cert.CustomerId ? T(P + "TaxExemption.UploadedBy.Customer") : T(P + "TaxExemption.UploadedBy.Admin"))</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    <partial name="~/Plugins/Misc.CustomerProfile/Views/Admin/_Pager.cshtml" model="Model" />
+                }
+            </div>
+        </div>
+    </div>
+</section>

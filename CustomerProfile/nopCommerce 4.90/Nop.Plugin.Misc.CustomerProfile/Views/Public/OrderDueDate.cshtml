@@ -1,0 +1,9 @@
+@model OrderDueDateModel
+@{
+    const string P = CustomerProfileDefaults.LocalePrefix;
+}
+<div class="customer-profile-due-date @(Model.Overdue ? "overdue" : "")">
+    <strong style="@(Model.Overdue ? "color:#c00" : "")">
+        @string.Format(T(Model.Overdue ? P + "Net30.OverdueSince" : P + "Net30.DueOn").Text, Model.DueOn.ToShortDateString())
+    </strong>
+</div>

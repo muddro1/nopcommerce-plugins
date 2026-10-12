@@ -26,7 +26,7 @@ public static class Locales
         [P + "Net30.PaymentInfo"] = "Your order will be invoiced. Payment is due within {0} days of the order date.",
         [P + "Net30.OrderNote"] = "Net 30: payment due {0}.",
         [P + "Net30.DueOn"] = "Payment due {0}",
-        [P + "Net30.OverdueSince"] = "Payment overdue since {0}",
+        [P + "Net30.OverdueSince"] = "Payment overdue: it was due {0}",
 
         [P + "TaxExemption"] = "Tax exemption",
         [P + "TaxExemption.Status.None"] = "No tax exemption certificate on file.",

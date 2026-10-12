@@ -1,0 +1,72 @@
+@model Net30OrdersModel
+@inject Nop.Services.Catalog.IPriceFormatter PriceFormatter
+@inject Nop.Services.Helpers.IDateTimeHelper DateTimeHelper
+@{
+    Layout = "_AdminLayout";
+    NopHtml.SetActiveMenuItemSystemName(CustomerProfileDefaults.MenuNet30Orders);
+    const string P = CustomerProfileDefaults.LocalePrefix;
+    ViewBag.Title = T(P + "Admin.Net30Orders").Text;
+}
+
+<div class="content-header clearfix">
+    <h1 class="float-left">Customer Profile <small>@T(P + "Admin.Net30Orders")</small></h1>
+</div>
+
+<section class="content">
+    <div class="container-fluid">
+        <div class="card card-default">
+            <div class="card-body">
+                <form method="get" asp-action="Net30Orders" class="form-inline mb-3">
+                    <div class="form-check mr-3">
+                        <input class="form-check-input" type="checkbox" id="overdueOnly" name="overdueOnly" value="true" @(Model.OverdueOnly ? "checked" : "") />
+                        <label class="form-check-label" for="overdueOnly">@T(P + "Admin.OverdueOnly")</label>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search"></i> @T(P + "Admin.Search")</button>
+                </form>
+
+                @if (!Model.Rows.Any())
+                {
+                    <p class="text-muted">@T("Admin.Common.NoData")</p>
+                }
+                else
+                {
+                    <table class="table table-bordered table-hover table-striped">
+                        <thead>
+                            <tr>
+                                <th>@T(P + "Admin.Order")</th>
+                                <th>@T(P + "Admin.Customer")</th>
+                                <th>@T(P + "Dealership")</th>
+                                <th class="text-right">@T(P + "Admin.OrderTotal")</th>
+                                <th>@T(P + "Admin.OrderDate")</th>
+                                <th>@T(P + "Admin.DueOn")</th>
+                                <th>@T(P + "Admin.DaysOverdue")</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var row in Model.Rows)
+                            {
+                                var daysOverdue = (Model.Today - row.Net30.DueOn.Date).Days;
+                                <tr class="@(daysOverdue > 0 ? "table-danger" : "")">
+                                    <td><a asp-controller="Order" asp-action="Edit" asp-route-id="@row.Net30.OrderId">@row.CustomOrderNumber</a></td>
+                                    <td>
+                                        <a asp-controller="Customer" asp-action="Edit" asp-route-id="@row.Net30.CustomerId">@(string.IsNullOrEmpty(row.CustomerName) ? row.CustomerEmail : row.CustomerName)</a>
+                                        @if (!string.IsNullOrEmpty(row.Company))
+                                        {
+                                            <br /><small class="text-muted">@row.Company</small>
+                                        }
+                                    </td>
+                                    <td>@row.Dealership</td>
+                                    <td class="text-right">@(await PriceFormatter.FormatPriceAsync(row.OrderTotal, true, false))</td>
+                                    <td>@((await DateTimeHelper.ConvertToUserTimeAsync(row.OrderCreatedOnUtc, DateTimeKind.Utc)).ToShortDateString())</td>
+                                    <td>@row.Net30.DueOn.ToShortDateString()</td>
+                                    <td>@(daysOverdue > 0 ? daysOverdue.ToString() : "")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    <partial name="~/Plugins/Misc.CustomerProfile/Views/Admin/_Pager.cshtml" model="Model" />
+                }
+            </div>
+        </div>
+    </div>
+</section>
