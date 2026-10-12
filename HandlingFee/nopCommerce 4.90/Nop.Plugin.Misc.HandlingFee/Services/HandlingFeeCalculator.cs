@@ -1,9 +1,9 @@
 namespace Nop.Plugin.Misc.HandlingFee.Services
 {
     /// <summary>
-    /// Decides whether a handling fee applies, and how much it is.
-    /// Deliberately pure: it takes every figure it needs as a parameter so that it
-    /// has no dependency on nopCommerce services and cannot take part in a DI cycle.
+    /// The 2.00 entry point, kept as a thin wrapper over <see cref="HandlingFeeRule"/>. With
+    /// default settings for everything added in 2.10 it must give exactly the 2.00 answer,
+    /// which is what its tests pin down.
     /// </summary>
     public static class HandlingFeeCalculator
     {
@@ -20,30 +20,13 @@ namespace Nop.Plugin.Misc.HandlingFee.Services
             decimal? shippingTotal,
             bool cartRequiresShipping)
         {
-            //a disabled or absent configuration must be a complete no-op
-            if (settings == null || !settings.Enabled)
-                return decimal.Zero;
-
-            //the fee pays for physical handling, so downloadable and virtual orders are exempt
-            if (!cartRequiresShipping)
-                return decimal.Zero;
-
-            //"at or below" the threshold
-            if (goodsSubtotalAfterDiscounts > settings.ThresholdAmount)
-                return decimal.Zero;
-
-            //a shipping charge of any size absorbs the fee entirely
-            //a null shipping total means no method chosen yet, which counts as no charge
-            if (settings.SuppressWhenShippingCharged && (shippingTotal ?? decimal.Zero) > decimal.Zero)
-                return decimal.Zero;
-
-            //defence in depth: a misconfigured (e.g. negative) FeeAmount must never make an
-            //order cheaper. Validation on the settings form should already stop this at the
-            //source, but the calculator must not trust that it always will.
-            if (settings.FeeAmount <= decimal.Zero)
-                return decimal.Zero;
-
-            return settings.FeeAmount;
+            return HandlingFeeRule.Evaluate(settings, new HandlingFeeContext
+            {
+                SubtotalAfterDiscounts = goodsSubtotalAfterDiscounts,
+                SubtotalBeforeOrderDiscounts = goodsSubtotalAfterDiscounts,
+                ShippingTotal = shippingTotal,
+                HasShippedItem = cartRequiresShipping
+            }).Fee;
         }
     }
 }

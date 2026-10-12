@@ -2,7 +2,7 @@
   "Group": "Misc",
   "FriendlyName": "Handling fee for small orders",
   "SystemName": "Misc.HandlingFee",
-  "Version": "2.00",
+  "Version": "2.10",
   "SupportedVersions": [ "4.90" ],
   "Author": "muddro1",
   "DisplayOrder": 1,

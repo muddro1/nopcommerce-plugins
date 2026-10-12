@@ -55,7 +55,8 @@ namespace Nop.Plugin.Misc.HandlingFee.Tests
                 provider.Object,
                 cartService.Object,
                 settingService.Object,
-                storeContext.Object);
+                storeContext.Object,
+                ContextFactories.Build(null, cartService.Object, storeContext.Object));
         }
 
         private static HandlingFeeSettings Settings(bool enabled = true)

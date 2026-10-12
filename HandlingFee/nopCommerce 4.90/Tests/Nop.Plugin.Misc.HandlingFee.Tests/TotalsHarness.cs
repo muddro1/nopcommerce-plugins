@@ -81,7 +81,8 @@ namespace Nop.Plugin.Misc.HandlingFee.Tests
                 provider.Object,
                 cartService.Object,
                 settingService.Object,
-                storeContext.Object);
+                storeContext.Object,
+                ContextFactories.Build(customerService.Object, cartService.Object, storeContext.Object));
 
             //Pass the mocks above for customerService, genericAttributeService, paymentService,
             //storeContext and taxService. Pass new ShoppingCartSettings { RoundPricesDuringCalculation = false }.

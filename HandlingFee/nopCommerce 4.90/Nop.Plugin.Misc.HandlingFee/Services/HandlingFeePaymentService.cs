@@ -22,6 +22,7 @@ namespace Nop.Plugin.Misc.HandlingFee.Services
     {
         #region Fields
 
+        private readonly HandlingFeeContextFactory _contextFactory;
         private readonly IServiceProvider _serviceProvider;
         private readonly IShoppingCartService _shoppingCartService;
         private readonly ISettingService _settingService;
@@ -39,10 +40,12 @@ namespace Nop.Plugin.Misc.HandlingFee.Services
             IServiceProvider serviceProvider,
             IShoppingCartService shoppingCartService,
             ISettingService settingService,
-            IStoreContext storeContext)
+            IStoreContext storeContext,
+            HandlingFeeContextFactory contextFactory)
             : base(customerService, paymentPluginManager,
                 priceCalculationService, paymentSettings, shoppingCartSettings)
         {
+            _contextFactory = contextFactory;
             _serviceProvider = serviceProvider;
             _shoppingCartService = shoppingCartService;
             _settingService = settingService;
@@ -71,25 +74,23 @@ namespace Nop.Plugin.Misc.HandlingFee.Services
             if (settings == null || !settings.Enabled)
                 return fee;
 
-            //cheap check first: a cart that needs no shipping never attracts the fee, so there
-            //is no reason to pay for the two totals calls below - each is called once per active
-            //payment method when rendering the payment method page, and shipping internally
-            //recomputes the subtotal again when "free shipping over X" is enabled, so both are
-            //expensive. Downloadable-only carts should cost nothing extra.
-            var requiresShipping = await _shoppingCartService.ShoppingCartRequiresShippingAsync(cart);
-            if (!requiresShipping)
+            //cheap check first: when a shipped item is required, a cart that needs no shipping
+            //never attracts the fee, so there is no reason to pay for the totals calls the context
+            //needs - each is called once per active payment method when rendering the payment
+            //method page, and shipping internally recomputes the subtotal again when "free
+            //shipping over X" is enabled, so both are expensive. Downloadable-only carts should
+            //cost nothing extra. (Leaving excluded items out can only remove shipped items, so
+            //this shortcut holds in either exclusion mode.)
+            if (settings.RequireShippedItem && !await _shoppingCartService.ShoppingCartRequiresShippingAsync(cart))
                 return fee;
 
             //resolved lazily rather than injected, to avoid a DI cycle with
             //HandlingFeeOrderTotalCalculationService, which depends on IPaymentService
             var orderTotalCalculationService = _serviceProvider.GetRequiredService<IOrderTotalCalculationService>();
 
-            var (_, _, _, subTotalWithDiscount, _) = await orderTotalCalculationService
-                .GetShoppingCartSubTotalAsync(cart, false);
-            var shippingTotal = (await orderTotalCalculationService
-                .GetShoppingCartShippingTotalAsync(cart, false)).shippingTotal;
+            var context = await _contextFactory.CreateAsync(cart, settings, orderTotalCalculationService);
 
-            return fee + HandlingFeeCalculator.Calculate(settings, subTotalWithDiscount, shippingTotal, requiresShipping);
+            return fee + HandlingFeeRule.Evaluate(settings, context).Fee;
         }
 
 

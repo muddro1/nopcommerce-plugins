@@ -18,6 +18,7 @@ namespace Nop.Plugin.Misc.HandlingFee.Infrastructure
         public void ConfigureServices(IServiceCollection services, IConfiguration configuration)
         {
             services.AddScoped<HandlingFeeLabelService>();
+            services.AddScoped<HandlingFeeContextFactory>();
 
             services.AddScoped<IPaymentService, HandlingFeePaymentService>();
             services.AddScoped<IOrderTotalCalculationService, HandlingFeeOrderTotalCalculationService>();
