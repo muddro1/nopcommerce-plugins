@@ -82,8 +82,8 @@ namespace Nop.Plugin.Misc.HandlingFee
 
         /// <summary>
         /// Gets or sets the shipping methods the fee is limited to, as a JSON list of tokens:
-        /// "provider:{system name}" for any option of a shipping provider, "method:{name}" for
-        /// a named option. Empty means every method.
+        /// "provider:{system name}" for any option of a shipping provider, "method:{id}" for a
+        /// shipping method (Configuration > Shipping > Shipping methods). Empty means every method.
         /// </summary>
         public string ShippingMethodsJson { get; set; }
 

@@ -354,6 +354,8 @@ saving and reopen it. Nothing you typed should have been stored.
 | (same) | Choose the free method at checkout | 4.95 |
 | (same), with **No fee when shipping is charged** unticked | Choose a paid UPS/FedEx upgrade | none (method not included) |
 | **Only these countries**: United States | Ship to a Canadian address | none |
+| (same) | Pickup in store at a US pickup point, with a Canadian shipping address on the account | 4.95 (pickup point's country) |
+| **Only these shipping methods**: your free method, store with a second language whose name for it differs | Shop in that language, choose the free method | 4.95 |
 | **Exempt customer roles**: a test role you add yourself to | Physical, 30.00, free shipping | none |
 | **Excluded categories**: Gift Cards, mode **Waive the fee** | Gift card + physical item, total 30.00 | none |
 | (same), mode **Leave them out** | Gift card 25.00 + physical item 20.00, free shipping | 4.95 (only 20.00 measured) |

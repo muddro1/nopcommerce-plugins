@@ -164,13 +164,16 @@ namespace Nop.Plugin.Misc.HandlingFee.Tests
         }
 
         [Test]
-        public void Shipping_method_filter_matches_a_named_method_or_a_whole_provider()
+        public void Shipping_method_filter_matches_a_shipping_method_or_a_whole_provider()
         {
             var settings = Settings();
-            settings.ShippingMethodsJson = HandlingFeeRule.SerialiseTokens(new[] { "method:Free Shipping", "provider:Shipping.UPS" });
+            settings.ShippingMethodsJson = HandlingFeeRule.SerialiseTokens(new[] { "method:4", "provider:Shipping.UPS" });
 
-            Evaluate(settings, Cart() with { ShippingProviderSystemName = "Shipping.FixedByWeightByTotal", ShippingOptionName = "free shipping" })
+            //matched by the method the option was built from, whatever language its name is in
+            Evaluate(settings, Cart() with { ShippingProviderSystemName = "Shipping.FixedByWeightByTotal", ShippingOptionName = "Kostenloser Versand", ShippingMethodId = 4 })
                 .Reason.Should().Be(HandlingFeeReason.Applied);
+            Evaluate(settings, Cart() with { ShippingProviderSystemName = "Shipping.FixedByWeightByTotal", ShippingOptionName = "Ground", ShippingMethodId = 5 })
+                .Reason.Should().Be(HandlingFeeReason.ShippingMethodNotIncluded);
             Evaluate(settings, Cart() with { ShippingProviderSystemName = "Shipping.UPS", ShippingOptionName = "UPS Ground" })
                 .Reason.Should().Be(HandlingFeeReason.Applied);
             Evaluate(settings, Cart() with { ShippingProviderSystemName = "Shipping.FedEx", ShippingOptionName = "FedEx 2Day" })
@@ -178,10 +181,19 @@ namespace Nop.Plugin.Misc.HandlingFee.Tests
         }
 
         [Test]
-        public void An_unchosen_shipping_method_passes()
+        public void A_method_token_saved_by_name_still_matches_the_default_language_name()
         {
             var settings = Settings();
             settings.ShippingMethodsJson = HandlingFeeRule.SerialiseTokens(new[] { "method:Free Shipping" });
+
+            Evaluate(settings, Cart() with { ShippingOptionName = "free shipping" }).Reason.Should().Be(HandlingFeeReason.Applied);
+        }
+
+        [Test]
+        public void An_unchosen_shipping_method_passes()
+        {
+            var settings = Settings();
+            settings.ShippingMethodsJson = HandlingFeeRule.SerialiseTokens(new[] { "method:4" });
 
             Evaluate(settings, Cart()).Reason.Should().Be(HandlingFeeReason.Applied);
         }

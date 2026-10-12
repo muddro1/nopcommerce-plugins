@@ -42,8 +42,14 @@ namespace Nop.Plugin.Misc.HandlingFee.Services
         /// <summary>The selected shipping option's provider system name; null when not chosen yet</summary>
         public string ShippingProviderSystemName { get; init; }
 
-        /// <summary>The selected shipping option's name; null when not chosen yet</summary>
+        /// <summary>The selected shipping option's name, as the customer saw it (possibly localized); null when not chosen yet</summary>
         public string ShippingOptionName { get; init; }
+
+        /// <summary>
+        /// The shipping method (Configuration > Shipping > Shipping methods) the selected option
+        /// was built from, matched across every language's name; null when none matches or nothing is chosen yet
+        /// </summary>
+        public int? ShippingMethodId { get; init; }
     }
 
     /// <summary>
@@ -133,7 +139,8 @@ namespace Nop.Plugin.Misc.HandlingFee.Services
 
             //same for a shipping method not chosen yet
             var methods = ParseTokens(settings.ShippingMethodsJson);
-            if (methods.Count > 0 && (context.ShippingProviderSystemName != null || context.ShippingOptionName != null)
+            if (methods.Count > 0
+                && (context.ShippingProviderSystemName != null || context.ShippingOptionName != null || context.ShippingMethodId.HasValue)
                 && !methods.Any(token => MatchesShippingToken(token, context)))
                 return No(HandlingFeeReason.ShippingMethodNotIncluded);
 
@@ -270,7 +277,18 @@ namespace Nop.Plugin.Misc.HandlingFee.Services
                 return string.Equals(token[providerPrefix.Length..], context.ShippingProviderSystemName, StringComparison.OrdinalIgnoreCase);
 
             if (token.StartsWith(methodPrefix, StringComparison.OrdinalIgnoreCase))
-                return string.Equals(token[methodPrefix.Length..], context.ShippingOptionName, StringComparison.OrdinalIgnoreCase);
+            {
+                var method = token[methodPrefix.Length..];
+
+                //"method:{id}": the option's provider names it in the customer's language, so it is
+                //matched through the method it was built from, never by its displayed name
+                if (int.TryParse(method, out var methodId))
+                    return context.ShippingMethodId == methodId;
+
+                //"method:{name}", as saved by early 2.10 builds; the settings page rewrites these
+                //as ids, and until then they still work in the default language
+                return string.Equals(method, context.ShippingOptionName, StringComparison.OrdinalIgnoreCase);
+            }
 
             return false;
         }

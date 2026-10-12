@@ -52,8 +52,9 @@ The fee applies when **all** of these hold. New conditions are marked ★.
    subtotal must not pass the threshold.
 4. The cart contains at least one shipped item. ★ This is now a setting
    (default on). In exclusion mode "leave out", excluded items don't count.
-5. ★ The shipping address country is one of the selected countries, or no
-   countries are selected.
+5. ★ The destination country is one of the selected countries, or no
+   countries are selected. The destination is the pickup point's country
+   when the customer chose pickup in store, otherwise the shipping address's.
 6. ★ The selected shipping method is one of the selected methods, or no
    methods are selected.
 7. The shipping charge is zero, when "No fee when shipping is charged" is on
@@ -200,11 +201,16 @@ Four cards, plus a summary panel that stays visible:
    so the filter offers two kinds of entry:
    - **a whole provider**, e.g. "UPS (any service)", matched against the
      selected option's `ShippingRateComputationMethodSystemName`
-   - **a named shipping method** from Configuration → Shipping → Shipping
-     methods (the free method, for instance), matched by option name
+   - **a shipping method** from Configuration → Shipping → Shipping methods
+     (the free method, for instance). It is stored by id; the customer's
+     selected option is mapped back to its method by comparing the option
+     name with the method's name in every language, because the fixed-rate
+     provider names options in the shopper's language
 
    They are stored as tokens (`provider:Shipping.UPS`, `method:5`) in one
-   comma-separated setting. A typical setup is "only the free method", which
+   JSON setting. Tokens saved by name by early 2.10 builds still match in the
+   default language and are rewritten as ids when the settings page is next
+   opened. A typical setup is "only the free method", which
    says outright that a paid UPS or FedEx upgrade never carries the fee, on
    top of what "No fee when shipping is charged" already does.
 2. **Unknown values on the cart page** count as passing (confirmed).

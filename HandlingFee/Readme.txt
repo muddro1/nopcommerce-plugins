@@ -317,10 +317,13 @@ The Configure page is organised into cards:
       Require a shipped item: untick to charge downloadable-only orders too.
       No fee when shipping is charged: as before.
       Only these shipping methods: empty means every method. Pick a whole
-      provider - "UPS (any service)" - or a named method from Configuration >
-      Shipping > Shipping methods. Named methods are matched by name, so
-      re-pick one after renaming it.
-      Only these countries: matched against the shipping address.
+      provider - "UPS (any service)" - or a method from Configuration >
+      Shipping > Shipping methods. A method is stored by its id and
+      recognised by its name in every language, so it keeps working for
+      shoppers in other languages and after a rename. Pickup in store is
+      neither, so a shipping-method filter leaves pickup orders out.
+      Only these countries: matched against the shipping address, or, for
+      pickup in store, the pickup point's country.
       Exempt customer roles: customers in any of these never pay the fee.
 
   Excluded products & categories

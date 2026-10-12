@@ -66,7 +66,7 @@ namespace Nop.Plugin.Misc.HandlingFee.Tests
         public void Names_restrictions_and_shows_ids_for_anything_unknown()
         {
             var settings = Settings();
-            settings.ShippingMethodsJson = HandlingFeeRule.SerialiseTokens(new[] { "method:Free Shipping", "provider:Shipping.UPS" });
+            settings.ShippingMethodsJson = HandlingFeeRule.SerialiseTokens(new[] { "method:4", "provider:Shipping.UPS" });
             settings.CountryIds = "1";
             settings.ExemptCustomerRoleIds = "3,99";
             settings.ExcludedCategoryIds = "5";
@@ -74,7 +74,7 @@ namespace Nop.Plugin.Misc.HandlingFee.Tests
 
             var names = new HandlingFeeRuleNames
             {
-                ShippingMethods = new Dictionary<string, string> { ["method:Free Shipping"] = "Free Shipping", ["provider:Shipping.UPS"] = "UPS (any service)" },
+                ShippingMethods = new Dictionary<string, string> { ["method:4"] = "Free Shipping", ["provider:Shipping.UPS"] = "UPS (any service)" },
                 Countries = new Dictionary<int, string> { [1] = "United States" },
                 Roles = new Dictionary<int, string> { [3] = "Wholesale" },
                 Categories = new Dictionary<int, string> { [5] = "Gift Cards" },

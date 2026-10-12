@@ -9,7 +9,10 @@ using Nop.Core.Domain.Shipping;
 using Nop.Services.Catalog;
 using Nop.Services.Common;
 using Nop.Services.Customers;
+using Nop.Services.Directory;
+using Nop.Services.Localization;
 using Nop.Services.Orders;
+using Nop.Services.Shipping;
 
 namespace Nop.Plugin.Misc.HandlingFee.Services
 {
@@ -27,8 +30,12 @@ namespace Nop.Plugin.Misc.HandlingFee.Services
 
         private readonly IAddressService _addressService;
         private readonly ICategoryService _categoryService;
+        private readonly ICountryService _countryService;
         private readonly ICustomerService _customerService;
         private readonly IGenericAttributeService _genericAttributeService;
+        private readonly ILanguageService _languageService;
+        private readonly ILocalizationService _localizationService;
+        private readonly IShippingMethodsService _shippingMethodsService;
         private readonly IShoppingCartService _shoppingCartService;
         private readonly IStoreContext _storeContext;
 
@@ -38,15 +45,23 @@ namespace Nop.Plugin.Misc.HandlingFee.Services
 
         public HandlingFeeContextFactory(IAddressService addressService,
             ICategoryService categoryService,
+            ICountryService countryService,
             ICustomerService customerService,
             IGenericAttributeService genericAttributeService,
+            ILanguageService languageService,
+            ILocalizationService localizationService,
+            IShippingMethodsService shippingMethodsService,
             IShoppingCartService shoppingCartService,
             IStoreContext storeContext)
         {
             _addressService = addressService;
             _categoryService = categoryService;
+            _countryService = countryService;
             _customerService = customerService;
             _genericAttributeService = genericAttributeService;
+            _languageService = languageService;
+            _localizationService = localizationService;
+            _shippingMethodsService = shippingMethodsService;
             _shoppingCartService = shoppingCartService;
             _storeContext = storeContext;
         }
@@ -98,7 +113,7 @@ namespace Nop.Plugin.Misc.HandlingFee.Services
             //shipping is charged on the whole order, excluded items included
             var shippingTotal = (await orderTotalCalculationService.GetShoppingCartShippingTotalAsync(cart, false)).shippingTotal;
 
-            var (providerSystemName, optionName) = await GetSelectedShippingOptionAsync(customer, settings);
+            var (providerSystemName, optionName, shippingMethodId) = await GetSelectedShippingOptionAsync(customer, settings);
 
             return new HandlingFeeContext
             {
@@ -111,7 +126,8 @@ namespace Nop.Plugin.Misc.HandlingFee.Services
                 CustomerRoleIds = await GetCustomerRoleIdsAsync(customer, settings),
                 CountryId = await GetShippingCountryIdAsync(customer, settings),
                 ShippingProviderSystemName = providerSystemName,
-                ShippingOptionName = optionName
+                ShippingOptionName = optionName,
+                ShippingMethodId = shippingMethodId
             };
         }
 
@@ -163,11 +179,28 @@ namespace Nop.Plugin.Misc.HandlingFee.Services
         }
 
         /// <summary>
-        /// The shipping address country, or null when there is no address yet - which the rule treats as passing
+        /// The country the order goes to: the pickup point's when the customer chose pickup in
+        /// store (the order then carries no shipping address, and the customer's last shipping
+        /// address may be anywhere), otherwise the shipping address's. Null when not known yet,
+        /// which the rule treats as passing.
         /// </summary>
         protected virtual async Task<int?> GetShippingCountryIdAsync(Customer customer, HandlingFeeSettings settings)
         {
-            if (customer?.ShippingAddressId is not > 0 || HandlingFeeRule.ParseIds(settings.CountryIds).Count == 0)
+            if (customer == null || HandlingFeeRule.ParseIds(settings.CountryIds).Count == 0)
+                return null;
+
+            var store = await _storeContext.GetCurrentStoreAsync();
+            var pickupPoint = await _genericAttributeService.GetAttributeAsync<PickupPoint>(customer,
+                NopCustomerDefaults.SelectedPickupPointAttribute, store.Id);
+            if (pickupPoint != null)
+            {
+                var pickupCountry = string.IsNullOrEmpty(pickupPoint.CountryCode)
+                    ? null
+                    : await _countryService.GetCountryByTwoLetterIsoCodeAsync(pickupPoint.CountryCode);
+                return pickupCountry?.Id;
+            }
+
+            if (customer.ShippingAddressId is not > 0)
                 return null;
 
             var address = await _addressService.GetAddressByIdAsync(customer.ShippingAddressId.Value);
@@ -175,19 +208,54 @@ namespace Nop.Plugin.Misc.HandlingFee.Services
         }
 
         /// <summary>
-        /// The selected shipping option, or nulls when none is chosen yet - which the rule treats as passing
+        /// The selected shipping option, and the shipping method it was built from; nulls when
+        /// none is chosen yet - which the rule treats as passing
         /// </summary>
-        protected virtual async Task<(string providerSystemName, string optionName)> GetSelectedShippingOptionAsync(
+        protected virtual async Task<(string providerSystemName, string optionName, int? shippingMethodId)> GetSelectedShippingOptionAsync(
             Customer customer, HandlingFeeSettings settings)
         {
-            if (customer == null || HandlingFeeRule.ParseTokens(settings.ShippingMethodsJson).Count == 0)
-                return (null, null);
+            var tokens = HandlingFeeRule.ParseTokens(settings.ShippingMethodsJson);
+            if (customer == null || tokens.Count == 0)
+                return (null, null, null);
 
             var store = await _storeContext.GetCurrentStoreAsync();
             var option = await _genericAttributeService.GetAttributeAsync<ShippingOption>(customer,
                 NopCustomerDefaults.SelectedShippingOptionAttribute, store.Id);
 
-            return (option?.ShippingRateComputationMethodSystemName, option?.Name);
+            var methodId = tokens.Any(token => token.StartsWith("method:", StringComparison.OrdinalIgnoreCase))
+                ? await FindShippingMethodIdAsync(option?.Name)
+                : null;
+
+            return (option?.ShippingRateComputationMethodSystemName, option?.Name, methodId);
+        }
+
+        /// <summary>
+        /// The shipping method whose name, in any language, is the option name the customer saw.
+        /// Providers such as "Fixed or by weight and by total" name each option after a shipping
+        /// method in the customer's working language, so the raw name alone misses every other language.
+        /// </summary>
+        protected virtual async Task<int?> FindShippingMethodIdAsync(string optionName)
+        {
+            if (string.IsNullOrEmpty(optionName))
+                return null;
+
+            var methods = await _shippingMethodsService.GetAllShippingMethodsAsync();
+
+            var byRawName = methods.FirstOrDefault(method => string.Equals(method.Name, optionName, StringComparison.OrdinalIgnoreCase));
+            if (byRawName != null)
+                return byRawName.Id;
+
+            foreach (var language in await _languageService.GetAllLanguagesAsync(showHidden: true))
+            {
+                foreach (var method in methods)
+                {
+                    var localizedName = await _localizationService.GetLocalizedAsync(method, x => x.Name, language.Id, false, false);
+                    if (string.Equals(localizedName, optionName, StringComparison.OrdinalIgnoreCase))
+                        return method.Id;
+                }
+            }
+
+            return null;
         }
 
         #endregion

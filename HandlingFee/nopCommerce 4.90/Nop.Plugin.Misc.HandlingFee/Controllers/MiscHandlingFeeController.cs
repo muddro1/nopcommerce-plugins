@@ -167,8 +167,23 @@ namespace Nop.Plugin.Misc.HandlingFee.Controllers
             var shippingNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             foreach (var provider in await _shippingPluginManager.LoadAllPluginsAsync())
                 shippingNames[PROVIDER_PREFIX + provider.PluginDescriptor.SystemName] = $"{provider.PluginDescriptor.FriendlyName} (any service)";
-            foreach (var method in await _shippingMethodsService.GetAllShippingMethodsAsync())
-                shippingNames[METHOD_PREFIX + method.Name] = method.Name;
+            var methods = await _shippingMethodsService.GetAllShippingMethodsAsync();
+            foreach (var method in methods)
+                shippingNames[METHOD_PREFIX + method.Id] = method.Name;
+
+            //early 2.10 builds stored a method by its name, which misses customers shopping in any
+            //other language; point those at the method's id instead, so the next save stores that
+            model.SelectedShippingMethods = model.SelectedShippingMethods
+                .Select(token =>
+                {
+                    if (!token.StartsWith(METHOD_PREFIX, StringComparison.OrdinalIgnoreCase) || int.TryParse(token[METHOD_PREFIX.Length..], out _))
+                        return token;
+
+                    var match = methods.FirstOrDefault(method => string.Equals(method.Name, token[METHOD_PREFIX.Length..], StringComparison.OrdinalIgnoreCase));
+                    return match != null ? METHOD_PREFIX + match.Id : token;
+                })
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
 
             //a stored token whose provider was uninstalled or method renamed stays visible, so it
             //is never silently dropped on the next save
@@ -214,7 +229,14 @@ namespace Nop.Plugin.Misc.HandlingFee.Controllers
                         : $"{token} (no longer available)";
                 }
                 else if (token.StartsWith(METHOD_PREFIX, StringComparison.OrdinalIgnoreCase))
-                    shippingNames[token] = token[METHOD_PREFIX.Length..];
+                {
+                    var method = token[METHOD_PREFIX.Length..];
+                    var shippingMethod = int.TryParse(method, out var methodId)
+                        ? await _shippingMethodsService.GetShippingMethodByIdAsync(methodId)
+                        : null;
+
+                    shippingNames[token] = shippingMethod?.Name ?? (methodId > 0 ? $"{token} (no longer available)" : method);
+                }
             }
 
             var roles = new Dictionary<int, string>();
@@ -397,7 +419,11 @@ namespace Nop.Plugin.Misc.HandlingFee.Controllers
                 CustomerRoleIds = test.RoleId > 0 ? new[] { test.RoleId } : Array.Empty<int>(),
                 CountryId = test.CountryId > 0 ? test.CountryId : null,
                 ShippingProviderSystemName = token.StartsWith(PROVIDER_PREFIX, StringComparison.OrdinalIgnoreCase) ? token[PROVIDER_PREFIX.Length..] : null,
-                ShippingOptionName = token.StartsWith(METHOD_PREFIX, StringComparison.OrdinalIgnoreCase) ? token[METHOD_PREFIX.Length..] : null
+                //the tester's methods are listed by id, exactly as stored, so no name matching is involved
+                ShippingMethodId = token.StartsWith(METHOD_PREFIX, StringComparison.OrdinalIgnoreCase)
+                    && int.TryParse(token[METHOD_PREFIX.Length..], out var testMethodId) ? testMethodId : null,
+                ShippingOptionName = token.StartsWith(METHOD_PREFIX, StringComparison.OrdinalIgnoreCase)
+                    && !int.TryParse(token[METHOD_PREFIX.Length..], out _) ? token[METHOD_PREFIX.Length..] : null
             };
 
             var decision = HandlingFeeRule.Evaluate(settings, context);

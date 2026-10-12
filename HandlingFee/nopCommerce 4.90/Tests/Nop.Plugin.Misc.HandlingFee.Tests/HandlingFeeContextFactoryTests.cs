@@ -15,7 +15,10 @@ using Nop.Plugin.Misc.HandlingFee.Services;
 using Nop.Services.Catalog;
 using Nop.Services.Common;
 using Nop.Services.Customers;
+using Nop.Services.Directory;
+using Nop.Services.Localization;
 using Nop.Services.Orders;
+using Nop.Services.Shipping;
 using NUnit.Framework;
 
 namespace Nop.Plugin.Misc.HandlingFee.Tests
@@ -29,6 +32,10 @@ namespace Nop.Plugin.Misc.HandlingFee.Tests
         private Mock<ICategoryService> _categoryService;
         private Mock<IAddressService> _addressService;
         private Mock<IGenericAttributeService> _genericAttributeService;
+        private Mock<ICountryService> _countryService;
+        private Mock<ILanguageService> _languageService;
+        private Mock<ILocalizationService> _localizationService;
+        private Mock<IShippingMethodsService> _shippingMethodsService;
         private Mock<IStoreContext> _storeContext;
         private Mock<IOrderTotalCalculationService> _totals;
 
@@ -55,6 +62,10 @@ namespace Nop.Plugin.Misc.HandlingFee.Tests
             _categoryService = new Mock<ICategoryService>();
             _addressService = new Mock<IAddressService>();
             _genericAttributeService = new Mock<IGenericAttributeService>();
+            _countryService = new Mock<ICountryService>();
+            _languageService = new Mock<ILanguageService>();
+            _localizationService = new Mock<ILocalizationService>();
+            _shippingMethodsService = new Mock<IShippingMethodsService>();
             _storeContext = new Mock<IStoreContext>();
             _storeContext.Setup(x => x.GetCurrentStoreAsync()).ReturnsAsync(new Store { Id = 1 });
 
@@ -73,7 +84,8 @@ namespace Nop.Plugin.Misc.HandlingFee.Tests
         private Task<HandlingFeeContext> CreateAsync(HandlingFeeSettings settings, params ShoppingCartItem[] cart)
         {
             var factory = ContextFactories.Build(_customerService.Object, _cartService.Object, _storeContext.Object,
-                _categoryService.Object, _addressService.Object, _genericAttributeService.Object);
+                _categoryService.Object, _addressService.Object, _genericAttributeService.Object,
+                _countryService.Object, _languageService.Object, _localizationService.Object, _shippingMethodsService.Object);
 
             return factory.CreateAsync(cart.ToList(), settings, _totals.Object);
         }
@@ -94,6 +106,9 @@ namespace Nop.Plugin.Misc.HandlingFee.Tests
             _categoryService.VerifyNoOtherCalls();
             _addressService.VerifyNoOtherCalls();
             _genericAttributeService.VerifyNoOtherCalls();
+            _countryService.VerifyNoOtherCalls();
+            _shippingMethodsService.VerifyNoOtherCalls();
+            _localizationService.VerifyNoOtherCalls();
             _customerService.Verify(x => x.GetCustomerRoleIdsAsync(It.IsAny<Customer>(), It.IsAny<bool>()), Times.Never);
         }
 
@@ -153,6 +168,30 @@ namespace Nop.Plugin.Misc.HandlingFee.Tests
         }
 
         [Test]
+        public async Task Pickup_in_store_uses_the_pickup_points_country_not_the_last_shipping_address()
+        {
+            _addressService.Setup(x => x.GetAddressByIdAsync(77)).ReturnsAsync(new Address { Id = 77, CountryId = 4 });
+            _genericAttributeService.Setup(x => x.GetAttributeAsync<PickupPoint>(_customer,
+                    NopCustomerDefaults.SelectedPickupPointAttribute, 1, null))
+                .ReturnsAsync(new PickupPoint { CountryCode = "CA" });
+            _countryService.Setup(x => x.GetCountryByTwoLetterIsoCodeAsync("CA"))
+                .ReturnsAsync(new Nop.Core.Domain.Directory.Country { Id = 2 });
+
+            (await CreateAsync(new HandlingFeeSettings { CountryIds = "1" }, Shirt)).CountryId.Should().Be(2);
+        }
+
+        [Test]
+        public async Task A_pickup_point_without_a_known_country_leaves_the_country_unknown()
+        {
+            _addressService.Setup(x => x.GetAddressByIdAsync(77)).ReturnsAsync(new Address { Id = 77, CountryId = 4 });
+            _genericAttributeService.Setup(x => x.GetAttributeAsync<PickupPoint>(_customer,
+                    NopCustomerDefaults.SelectedPickupPointAttribute, 1, null))
+                .ReturnsAsync(new PickupPoint());
+
+            (await CreateAsync(new HandlingFeeSettings { CountryIds = "1" }, Shirt)).CountryId.Should().BeNull();
+        }
+
+        [Test]
         public async Task No_shipping_address_yet_leaves_the_country_unknown()
         {
             _customer.ShippingAddressId = null;
@@ -172,6 +211,38 @@ namespace Nop.Plugin.Misc.HandlingFee.Tests
 
             context.ShippingProviderSystemName.Should().Be("Shipping.UPS");
             context.ShippingOptionName.Should().Be("UPS Ground");
+            //no method token, so no need to look the option up among the shipping methods
+            _shippingMethodsService.VerifyNoOtherCalls();
+        }
+
+        [Test]
+        public async Task An_option_named_in_another_language_resolves_to_its_shipping_method()
+        {
+            //the fixed-rate provider names each option in the shopper's language
+            _genericAttributeService.Setup(x => x.GetAttributeAsync<ShippingOption>(_customer,
+                    NopCustomerDefaults.SelectedShippingOptionAttribute, 1, null))
+                .ReturnsAsync(new ShippingOption { Name = "Bodenversand", ShippingRateComputationMethodSystemName = "Shipping.FixedByWeightByTotal" });
+
+            var ground = new ShippingMethod { Id = 5, Name = "Ground" };
+            var free = new ShippingMethod { Id = 4, Name = "Free Shipping" };
+            _shippingMethodsService.Setup(x => x.GetAllShippingMethodsAsync(null)).ReturnsAsync(new List<ShippingMethod> { free, ground });
+            _languageService.Setup(x => x.GetAllLanguagesAsync(true, 0))
+                .ReturnsAsync(new List<Nop.Core.Domain.Localization.Language> { new() { Id = 1 }, new() { Id = 2 } });
+            _localizationService.Setup(x => x.GetLocalizedAsync(It.IsAny<ShippingMethod>(), It.IsAny<System.Linq.Expressions.Expression<System.Func<ShippingMethod, string>>>(),
+                    It.IsAny<int?>(), false, false))
+                .ReturnsAsync((ShippingMethod method, System.Linq.Expressions.Expression<System.Func<ShippingMethod, string>> _, int? languageId, bool _, bool _) =>
+                    method == ground && languageId == 2 ? "Bodenversand" : string.Empty);
+
+            var settings = new HandlingFeeSettings { ShippingMethodsJson = HandlingFeeRule.SerialiseTokens(new[] { "method:5" }) };
+            var context = await CreateAsync(settings, Shirt);
+
+            context.ShippingMethodId.Should().Be(5);
+
+            //and end to end: a German shopper choosing the selected method still pays the fee
+            settings.Enabled = true;
+            settings.ThresholdAmount = 50m;
+            settings.FeeAmount = 4.95m;
+            HandlingFeeRule.Evaluate(settings, context).Reason.Should().Be(HandlingFeeReason.Applied);
         }
 
         [Test]
