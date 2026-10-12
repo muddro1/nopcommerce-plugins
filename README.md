@@ -1,13 +1,13 @@
 # nopCommerce plugins
 
-Four plugins for **nopCommerce 4.50**, each kept here as source and as a compiled folder you can drop straight onto a server.
+Four plugins for **nopCommerce 4.50** and **nopCommerce 4.90**, each kept here as source and as a compiled folder you can drop straight onto a server. The two builds of a plugin behave the same; they differ only in the nopCommerce version they compile against.
 
-| Plugin | System name | Version | Does |
+| Plugin | System name | Version (4.50 / 4.90) | Does |
 |---|---|---|---|
-| [Better product search](BetterSearch/Readme.txt) | `Misc.BetterSearch` | 1.00 | Replaces product search with a Lucene.NET index that ranks by relevance, matches SKUs by substring and tolerates typos |
-| [Handling fee for small orders](HandlingFee/Readme.txt) | `Misc.HandlingFee` | 1.03 | Charges a fee on small physical orders that qualify for free shipping |
-| [Customer has only these products](HasOnlyProducts/Readme.txt) | `DiscountRequirement.HasOnlyProducts` | 1.02 | Discount requirement rule: the cart holds all of the listed products, or any one of them, and optionally nothing else |
-| [Accurate attribute combination pricing](AttributeCombinationPricing/Readme.txt) | `Misc.AttributeCombinationPricing` | 1.01 | Corrects the price label on an Associated-to-Product attribute value - on the product page, cart, checkout and newly placed orders - so it reflects the attribute combination's Overridden price instead of the associated product's own price |
+| [Better product search](BetterSearch/Readme.txt) | `Misc.BetterSearch` | 1.00 / 2.00 | Replaces product search with a Lucene.NET index that ranks by relevance, matches SKUs by substring and tolerates typos |
+| [Handling fee for small orders](HandlingFee/Readme.txt) | `Misc.HandlingFee` | 1.03 / 2.10 | Charges a fee on small physical orders that qualify for free shipping |
+| [Customer has only these products](HasOnlyProducts/Readme.txt) | `DiscountRequirement.HasOnlyProducts` | 1.02 / 2.00 | Discount requirement rule: the cart holds all of the listed products, or any one of them, and optionally nothing else |
+| [Accurate attribute combination pricing](AttributeCombinationPricing/Readme.txt) | `Misc.AttributeCombinationPricing` | 1.01 / 2.00 | Corrects the price label on an Associated-to-Product attribute value - on the product page, cart, checkout and newly placed orders - so it reflects the attribute combination's Overridden price instead of the associated product's own price |
 
 Each plugin has its own `Readme.txt` covering configuration, edge cases and upgrade steps. Read that before deploying. The summaries below only cover what you would want to know before opening one.
 
@@ -19,9 +19,11 @@ Stock nopCommerce matches a product name with a plain substring test. This plugi
 
 One regression is worth knowing about. A partial word typed as a prefix can stop matching where stock found it: `hydraul` no longer reaches "Hydraulic Flange Assembly", because two edits separate them and seven characters buy only one. Identifiers are exempt, since SKUs and part numbers get indexed as n-grams, so `234` still finds `fmsa-ab-1234`. The `Readme.txt` goes into when this bites.
 
+On nopCommerce 4.90, which can hand keyword search to a search provider plugin such as nopCommerce's own Lucene search, this plugin takes precedence while it is enabled. Running both gains nothing.
+
 ## Handling fee for small orders
 
-For stores offering free shipping above some order size that still want to recover picking and packing costs below it. The fee applies only to physical orders at or below the threshold that ship for free, measured on the goods subtotal excluding tax.
+For stores offering free shipping above some order size that still want to recover picking and packing costs below it. The fee applies only to physical orders at or below the threshold that ship for free, measured on the goods subtotal excluding tax. On nopCommerce 4.90 (2.10) the rule is configurable from the admin page: flat, percentage or tiered fees; shipping-method, country and customer-role conditions; product and category exclusions; and a live plain-English summary with a "try a cart" tester. Every new option defaults to the original behaviour.
 
 The fee rides nopCommerce's payment-method-additional-fee channel, which is why it persists on the order, displays in the cart, admin, emails and PDF invoices, and picks up tax without extra code. Taxability comes from Configuration → Tax settings, not from the plugin.
 
@@ -41,14 +43,18 @@ The fix applies automatically, store-wide, with no configuration screen. Known l
 
 ## Repository layout
 
-Every plugin follows the same two-folder convention inside its `nopCommerce 4.50/` directory:
+Every plugin follows the same two-folder convention inside each of its `nopCommerce 4.50/` and `nopCommerce 4.90/` directories:
 
 ```
 BetterSearch/
 ├── nopCommerce 4.50/
 │   ├── Nop.Plugin.Misc.BetterSearch/   ← source project
 │   └── Misc.BetterSearch/              ← compiled, drop into /Plugins
-├── Tests/                              ← NUnit tests
+├── nopCommerce 4.90/
+│   ├── Nop.Plugin.Misc.BetterSearch/   ← source project
+│   ├── Misc.BetterSearch/              ← compiled, drop into /Plugins
+│   └── Tests/                          ← NUnit tests for the 4.90 build
+├── Tests/                              ← NUnit tests for the 4.50 build
 ├── Readme.txt
 └── TESTING.md                          ← manual test script
 ```
@@ -78,17 +84,19 @@ dotnet sln NopCommerce.sln add Plugins/Nop.Plugin.Misc.BetterSearch/Nop.Plugin.M
 dotnet build Plugins/Nop.Plugin.Misc.BetterSearch/Nop.Plugin.Misc.BetterSearch.csproj -c Release
 ```
 
-nopCommerce 4.50 pins SDK 6.0.101 in `global.json`. A newer SDK works if you set `rollForward` to `latestMajor`, though it also copies Nop.Web host files into the plugin output that the post-build cleaner leaves behind. Delete them. Each `Readme.txt` lists the files that belong in a clean plugin folder.
+Build each version's source inside the matching nopCommerce tree: `nopCommerce 4.50/` against 4.50.2 (net6.0), `nopCommerce 4.90/` against 4.90.8 (net9.0).
+
+nopCommerce 4.50 pins SDK 6.0.101 in `global.json`, and 4.90 pins 9.0.100. A newer SDK works if you set `rollForward` to `latestMajor`. Without the matching runtime installed, also set `DOTNET_ROLL_FORWARD=Major`, or the post-build cleaner fails to start (exit code 150). A newer SDK also copies Nop.Web host files into the plugin output that the cleaner leaves behind. Delete them. Each `Readme.txt` lists the files that belong in a clean plugin folder.
 
 ## Tests
 
-BetterSearch, HandlingFee and AttributeCombinationPricing carry NUnit suites under `Tests/`. BetterSearch and HandlingFee account for roughly 120 cases between them, covering the search query builder, SKU normalisation, index management, fee calculation and order totals; AttributeCombinationPricing's suite covers the corrected price-adjustment arithmetic and both overrides that apply it - the product page's display-layer factory and the shared price calculation service behind cart, checkout and order attribute descriptions. They run against fakes, so no database or nopCommerce host is needed.
+BetterSearch, HandlingFee and AttributeCombinationPricing carry NUnit suites: under `Tests/` for the 4.50 build and `nopCommerce 4.90/Tests/` for the 4.90 build. BetterSearch and HandlingFee account for roughly 120 cases between them, covering the search query builder, SKU normalisation, index management, fee calculation and order totals; AttributeCombinationPricing's suite covers the corrected price-adjustment arithmetic and both overrides that apply it - the product page's display-layer factory and the shared price calculation service behind cart, checkout and order attribute descriptions. They run against fakes, so no database or nopCommerce host is needed.
 
 BetterSearch and HandlingFee also ship a `TESTING.md` with a manual script for a real store: SQL to verify stored order columns, expected figures per scenario and the settings to toggle between parts.
 
 ## Releases
 
-Each plugin versions independently, under a namespaced tag: `better-search/v1.00`, `handling-fee/v1.03`, `has-only-products/v1.02`, `attribute-combination-pricing/v1.00`. Download the packaged zips from [Releases](https://github.com/muddro1/nopcommerce-plugins/releases).
+Each plugin versions independently, under a namespaced tag: `better-search/v1.00`, `handling-fee/v1.03`, `has-only-products/v1.02`, `attribute-combination-pricing/v1.00`. The 4.90 builds start at 2.00, so a tag's major version tells you which nopCommerce it targets: 1.x for 4.50, 2.x for 4.90. Download the packaged zips from [Releases](https://github.com/muddro1/nopcommerce-plugins/releases).
 
 To cut one, bump `Version` in both copies of the plugin's `plugin.json` (source and deployable folder), rebuild, copy the output over the deployable folder, then package and publish:
 
@@ -100,6 +108,18 @@ cd ../..
 git tag -a handling-fee/v1.04 -m "Handling fee for small orders 1.04 (nopCommerce 4.50)"
 git push origin handling-fee/v1.04
 gh release create handling-fee/v1.04 HandlingFee/Misc.HandlingFee.zip --title "Handling fee for small orders 1.04"
+```
+
+A 4.90 release works the same way from `nopCommerce 4.90/`. Give the zip a distinct name so it can't overwrite the 4.50 one:
+
+```bash
+cd "HandlingFee/nopCommerce 4.90"
+cp ../../LICENSE.md Misc.HandlingFee/
+zip -X -r -q ../Misc.HandlingFee-4.90.zip Misc.HandlingFee -x '*.DS_Store'
+cd ../..
+git tag -a handling-fee/v2.00 -m "Handling fee for small orders 2.00 (nopCommerce 4.90)"
+git push origin handling-fee/v2.00
+gh release create handling-fee/v2.00 HandlingFee/Misc.HandlingFee-4.90.zip --title "Handling fee for small orders 2.00"
 ```
 
 `LICENSE.md` goes inside the package because the zip distributes compiled GPL v3 code and the license has to travel with it. The zip itself stays untracked.

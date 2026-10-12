@@ -1,0 +1,448 @@
+@model Nop.Plugin.Misc.HandlingFee.Models.ConfigurationModel
+
+@{
+    Layout = "_ConfigurePlugin";
+
+    //dropdowns rather than radio buttons: the per-store override checkbox needs one element id per setting
+    var feeTypes = new List<SelectListItem>
+    {
+        new(T("Plugins.Misc.HandlingFee.Fields.FeeType.Flat").Text, "0"),
+        new(T("Plugins.Misc.HandlingFee.Fields.FeeType.Percentage").Text, "1"),
+        new(T("Plugins.Misc.HandlingFee.Fields.FeeType.Tiered").Text, "2")
+    };
+    var subtotalBases = new List<SelectListItem>
+    {
+        new(T("Plugins.Misc.HandlingFee.Fields.SubtotalBasis.AfterDiscounts").Text, "0"),
+        new(T("Plugins.Misc.HandlingFee.Fields.SubtotalBasis.BeforeOrderDiscounts").Text, "1")
+    };
+    var exclusionModes = new List<SelectListItem>
+    {
+        new(T("Plugins.Misc.HandlingFee.Fields.ExclusionMode.WaiveFee").Text, "0"),
+        new(T("Plugins.Misc.HandlingFee.Fields.ExclusionMode.LeaveOut").Text, "1")
+    };
+    var notKnownYet = T("Plugins.Misc.HandlingFee.Tester.NotKnownYet").Text;
+}
+
+<style>
+    .handling-fee-summary p { margin-bottom: .35rem; }
+    .handling-fee-result { font-weight: 600; margin-top: .75rem; }
+    .handling-fee-result.applied { color: #1e7e34; }
+    .handling-fee-result.not-applied { color: #6c757d; }
+    .handling-fee-tester .form-group { margin-bottom: .5rem; }
+    #handling-fee-tiers td { padding: .25rem .5rem .25rem 0; }
+    #handling-fee-tiers input { max-width: 10rem; }
+</style>
+
+@await Component.InvokeAsync("StoreScopeConfiguration")
+<form asp-controller="MiscHandlingFee" asp-action="Configure" method="post" id="handling-fee-form">
+    <div class="cards-group">
+
+        @* ---- rule summary and tester: always reflect the form as it stands, unsaved ---- *@
+        <div class="card card-default">
+            <div class="card-header"><i class="fas fa-lightbulb"></i> @T("Plugins.Misc.HandlingFee.Cards.Summary")</div>
+            <div class="card-body">
+                <div id="handling-fee-summary" class="handling-fee-summary"></div>
+                <hr />
+                <div class="handling-fee-tester">
+                    <h5>@T("Plugins.Misc.HandlingFee.Tester.Title")</h5>
+                    <p class="text-muted">@T("Plugins.Misc.HandlingFee.Tester.Hint")</p>
+                    <div class="row">
+                        <div class="col-md-3 form-group">
+                            <label for="Test_Subtotal">@T("Plugins.Misc.HandlingFee.Tester.Subtotal")</label>
+                            <input type="number" step="0.01" min="0" class="form-control" id="Test_Subtotal" name="Test.Subtotal" value="30.00" />
+                        </div>
+                        <div class="col-md-3 form-group">
+                            <label for="Test_SubtotalBeforeOrderDiscounts">@T("Plugins.Misc.HandlingFee.Tester.SubtotalBefore")</label>
+                            <input type="number" step="0.01" min="0" class="form-control" id="Test_SubtotalBeforeOrderDiscounts" name="Test.SubtotalBeforeOrderDiscounts" />
+                        </div>
+                        <div class="col-md-3 form-group">
+                            <label for="Test_Shipping">@T("Plugins.Misc.HandlingFee.Tester.Shipping")</label>
+                            <input type="number" step="0.01" min="0" class="form-control" id="Test_Shipping" name="Test.Shipping" value="0.00" />
+                        </div>
+                        <div class="col-md-3 form-group">
+                            <div class="form-check mt-4">
+                                <input type="checkbox" class="form-check-input" id="Test_HasShippedItem" name="Test.HasShippedItem" value="true" checked />
+                                <label class="form-check-label" for="Test_HasShippedItem">@T("Plugins.Misc.HandlingFee.Tester.HasShippedItem")</label>
+                            </div>
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="Test_HasExcludedItem" name="Test.HasExcludedItem" value="true" />
+                                <label class="form-check-label" for="Test_HasExcludedItem">@T("Plugins.Misc.HandlingFee.Tester.HasExcludedItem")</label>
+                            </div>
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="Test_OnlyExcludedItems" name="Test.OnlyExcludedItems" value="true" />
+                                <label class="form-check-label" for="Test_OnlyExcludedItems">@T("Plugins.Misc.HandlingFee.Tester.OnlyExcludedItems")</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 form-group">
+                            <label for="Test_RoleId">@T("Plugins.Misc.HandlingFee.Tester.Role")</label>
+                            <select class="form-control" id="Test_RoleId" name="Test.RoleId">
+                                <option value="0">-</option>
+                                @foreach (var role in Model.AvailableCustomerRoles)
+                                {
+                                    <option value="@role.Value">@role.Text</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label for="Test_CountryId">@T("Plugins.Misc.HandlingFee.Tester.Country")</label>
+                            <select class="form-control" id="Test_CountryId" name="Test.CountryId">
+                                <option value="0">@notKnownYet</option>
+                                @foreach (var country in Model.AvailableCountries)
+                                {
+                                    <option value="@country.Value">@country.Text</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label for="Test_ShippingMethod">@T("Plugins.Misc.HandlingFee.Tester.ShippingMethod")</label>
+                            <select class="form-control" id="Test_ShippingMethod" name="Test.ShippingMethod">
+                                <option value="">@notKnownYet</option>
+                                @foreach (var method in Model.AvailableShippingMethods)
+                                {
+                                    <option value="@method.Value">@method.Text</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                    <div id="handling-fee-result" class="handling-fee-result"></div>
+                </div>
+            </div>
+        </div>
+
+        @* ---- general ---- *@
+        <div class="card card-default">
+            <div class="card-header">@T("Plugins.Misc.HandlingFee.Cards.General")</div>
+            <div class="card-body">
+                <div class="form-group row">
+                    <div class="col-md-3">
+                        <nop-override-store-checkbox asp-for="Enabled_OverrideForStore" asp-input="Enabled" asp-store-scope="@Model.ActiveStoreScopeConfiguration" />
+                        <nop-label asp-for="Enabled" />
+                    </div>
+                    <div class="col-md-9">
+                        <nop-editor asp-for="Enabled" />
+                        <span asp-validation-for="Enabled"></span>
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <div class="col-md-3">
+                        @*no store-override checkbox: locale resources are per language, not per store*@
+                        <nop-label asp-for="Label" />
+                    </div>
+                    <div class="col-md-9">
+                        <nop-editor asp-for="Label" />
+                        <span asp-validation-for="Label"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* ---- fee amount ---- *@
+        <div class="card card-default">
+            <div class="card-header">@T("Plugins.Misc.HandlingFee.Cards.FeeAmount")</div>
+            <div class="card-body">
+                <div class="form-group row">
+                    <div class="col-md-3">
+                        <nop-override-store-checkbox asp-for="FeeType_OverrideForStore" asp-input="FeeType" asp-store-scope="@Model.ActiveStoreScopeConfiguration" />
+                        <nop-label asp-for="FeeType" />
+                    </div>
+                    <div class="col-md-9">
+                        <nop-select asp-for="FeeType" asp-items="feeTypes" />
+                    </div>
+                </div>
+
+                @* threshold: flat and percentage only - for tiered fees the top band is the limit *@
+                <div class="form-group row fee-type-flat fee-type-percentage">
+                    <div class="col-md-3">
+                        <nop-override-store-checkbox asp-for="ThresholdAmount_OverrideForStore" asp-input="ThresholdAmount" asp-store-scope="@Model.ActiveStoreScopeConfiguration" />
+                        <nop-label asp-for="ThresholdAmount" />
+                    </div>
+                    <div class="col-md-9">
+                        <nop-editor asp-for="ThresholdAmount" />
+                        <span asp-validation-for="ThresholdAmount"></span>
+                    </div>
+                </div>
+                <div class="form-group row fee-type-flat">
+                    <div class="col-md-3">
+                        <nop-override-store-checkbox asp-for="FeeAmount_OverrideForStore" asp-input="FeeAmount" asp-store-scope="@Model.ActiveStoreScopeConfiguration" />
+                        <nop-label asp-for="FeeAmount" />
+                    </div>
+                    <div class="col-md-9">
+                        <nop-editor asp-for="FeeAmount" />
+                        <span asp-validation-for="FeeAmount"></span>
+                    </div>
+                </div>
+                <div class="form-group row fee-type-percentage">
+                    <div class="col-md-3">
+                        <nop-override-store-checkbox asp-for="FeePercent_OverrideForStore" asp-input="FeePercent" asp-store-scope="@Model.ActiveStoreScopeConfiguration" />
+                        <nop-label asp-for="FeePercent" />
+                    </div>
+                    <div class="col-md-9">
+                        <nop-editor asp-for="FeePercent" />
+                        <span asp-validation-for="FeePercent"></span>
+                    </div>
+                </div>
+                <div class="form-group row fee-type-percentage">
+                    <div class="col-md-3">
+                        <nop-override-store-checkbox asp-for="FeeMinimum_OverrideForStore" asp-input="FeeMinimum" asp-store-scope="@Model.ActiveStoreScopeConfiguration" />
+                        <nop-label asp-for="FeeMinimum" />
+                    </div>
+                    <div class="col-md-9">
+                        <nop-editor asp-for="FeeMinimum" />
+                        <span asp-validation-for="FeeMinimum"></span>
+                    </div>
+                </div>
+                <div class="form-group row fee-type-percentage">
+                    <div class="col-md-3">
+                        <nop-override-store-checkbox asp-for="FeeMaximum_OverrideForStore" asp-input="FeeMaximum" asp-store-scope="@Model.ActiveStoreScopeConfiguration" />
+                        <nop-label asp-for="FeeMaximum" />
+                    </div>
+                    <div class="col-md-9">
+                        <nop-editor asp-for="FeeMaximum" />
+                        <span asp-validation-for="FeeMaximum"></span>
+                    </div>
+                </div>
+                <div class="form-group row fee-type-tiered">
+                    <div class="col-md-3">
+                        <nop-override-store-checkbox asp-for="TiersJson_OverrideForStore" asp-input="TiersJson" asp-store-scope="@Model.ActiveStoreScopeConfiguration" />
+                        <nop-label asp-for="TiersJson" />
+                    </div>
+                    <div class="col-md-9">
+                        <input type="hidden" asp-for="TiersJson" />
+                        <table id="handling-fee-tiers">
+                            <thead>
+                                <tr>
+                                    <th>@T("Plugins.Misc.HandlingFee.Fields.Tiers.UpTo")</th>
+                                    <th>@T("Plugins.Misc.HandlingFee.Fields.Tiers.Fee")</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                        <button type="button" id="handling-fee-add-tier" class="btn btn-default btn-sm mt-1">
+                            <i class="fas fa-plus"></i> @T("Plugins.Misc.HandlingFee.Fields.Tiers.Add")
+                        </button>
+                        <span asp-validation-for="TiersJson"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* ---- when the fee applies ---- *@
+        <div class="card card-default">
+            <div class="card-header">@T("Plugins.Misc.HandlingFee.Cards.Conditions")</div>
+            <div class="card-body">
+                <div class="form-group row">
+                    <div class="col-md-3">
+                        <nop-override-store-checkbox asp-for="SubtotalBasis_OverrideForStore" asp-input="SubtotalBasis" asp-store-scope="@Model.ActiveStoreScopeConfiguration" />
+                        <nop-label asp-for="SubtotalBasis" />
+                    </div>
+                    <div class="col-md-9">
+                        <nop-select asp-for="SubtotalBasis" asp-items="subtotalBases" />
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <div class="col-md-3">
+                        <nop-override-store-checkbox asp-for="RequireShippedItem_OverrideForStore" asp-input="RequireShippedItem" asp-store-scope="@Model.ActiveStoreScopeConfiguration" />
+                        <nop-label asp-for="RequireShippedItem" />
+                    </div>
+                    <div class="col-md-9">
+                        <nop-editor asp-for="RequireShippedItem" />
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <div class="col-md-3">
+                        <nop-override-store-checkbox asp-for="SuppressWhenShippingCharged_OverrideForStore" asp-input="SuppressWhenShippingCharged" asp-store-scope="@Model.ActiveStoreScopeConfiguration" />
+                        <nop-label asp-for="SuppressWhenShippingCharged" />
+                    </div>
+                    <div class="col-md-9">
+                        <nop-editor asp-for="SuppressWhenShippingCharged" />
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <div class="col-md-3">
+                        <nop-override-store-checkbox asp-for="SelectedShippingMethods_OverrideForStore" asp-input="SelectedShippingMethods" asp-store-scope="@Model.ActiveStoreScopeConfiguration" />
+                        <nop-label asp-for="SelectedShippingMethods" />
+                    </div>
+                    <div class="col-md-9">
+                        <nop-select asp-for="SelectedShippingMethods" asp-items="Model.AvailableShippingMethods" asp-multiple="true" />
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <div class="col-md-3">
+                        <nop-override-store-checkbox asp-for="SelectedCountryIds_OverrideForStore" asp-input="SelectedCountryIds" asp-store-scope="@Model.ActiveStoreScopeConfiguration" />
+                        <nop-label asp-for="SelectedCountryIds" />
+                    </div>
+                    <div class="col-md-9">
+                        <nop-select asp-for="SelectedCountryIds" asp-items="Model.AvailableCountries" asp-multiple="true" />
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <div class="col-md-3">
+                        <nop-override-store-checkbox asp-for="SelectedExemptCustomerRoleIds_OverrideForStore" asp-input="SelectedExemptCustomerRoleIds" asp-store-scope="@Model.ActiveStoreScopeConfiguration" />
+                        <nop-label asp-for="SelectedExemptCustomerRoleIds" />
+                    </div>
+                    <div class="col-md-9">
+                        <nop-select asp-for="SelectedExemptCustomerRoleIds" asp-items="Model.AvailableCustomerRoles" asp-multiple="true" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* ---- exclusions ---- *@
+        <div class="card card-default">
+            <div class="card-header">@T("Plugins.Misc.HandlingFee.Cards.Exclusions")</div>
+            <div class="card-body">
+                <div class="form-group row">
+                    <div class="col-md-3">
+                        <nop-override-store-checkbox asp-for="ExclusionMode_OverrideForStore" asp-input="ExclusionMode" asp-store-scope="@Model.ActiveStoreScopeConfiguration" />
+                        <nop-label asp-for="ExclusionMode" />
+                    </div>
+                    <div class="col-md-9">
+                        <nop-select asp-for="ExclusionMode" asp-items="exclusionModes" />
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <div class="col-md-3">
+                        <nop-override-store-checkbox asp-for="SelectedExcludedCategoryIds_OverrideForStore" asp-input="SelectedExcludedCategoryIds" asp-store-scope="@Model.ActiveStoreScopeConfiguration" />
+                        <nop-label asp-for="SelectedExcludedCategoryIds" />
+                    </div>
+                    <div class="col-md-9">
+                        <nop-select asp-for="SelectedExcludedCategoryIds" asp-items="Model.AvailableCategories" asp-multiple="true" />
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <div class="col-md-3">
+                        <nop-override-store-checkbox asp-for="ExcludedProductIds_OverrideForStore" asp-input="ExcludedProductIds" asp-store-scope="@Model.ActiveStoreScopeConfiguration" />
+                        <nop-label asp-for="ExcludedProductIds" />
+                    </div>
+                    <div class="col-md-9">
+                        <div class="input-group">
+                            <nop-editor asp-for="ExcludedProductIds" />
+                            <div class="input-group-btn">
+                                <button type="button" class="btn btn-info"
+                                        onclick="javascript:OpenWindow('@Url.Action("ProductAddPopup", "MiscHandlingFee", new { btnId = "handling-fee-refresh-products", productIdsInput = Html.IdFor(model => model.ExcludedProductIds) })', 800, 850, true); return false;">
+                                    @T("Plugins.Misc.HandlingFee.Fields.ExcludedProducts.Choose")
+                                </button>
+                                <button type="button" id="handling-fee-refresh-products" style="display: none"></button>
+                            </div>
+                        </div>
+                        <div id="handling-fee-product-names" class="text-blue mt-1"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group row">
+            <div class="col-md-9 offset-md-3">
+                <button type="submit" name="save" class="btn btn-primary">@T("Admin.Common.Save")</button>
+            </div>
+        </div>
+    </div>
+</form>
+
+<script>
+    $(function () {
+        var $form = $('#handling-fee-form');
+
+        //---- fee type: show only the fields the chosen type uses (hidden, never cleared) ----
+        var feeTypeClasses = { '0': '.fee-type-flat', '1': '.fee-type-percentage', '2': '.fee-type-tiered' };
+        function toggleFeeType() {
+            $form.find('.fee-type-flat, .fee-type-percentage, .fee-type-tiered').hide();
+            $form.find(feeTypeClasses[$('#@Html.IdFor(m => m.FeeType)').val()] || '.fee-type-flat').show();
+        }
+        $('#@Html.IdFor(m => m.FeeType)').on('change', toggleFeeType);
+        toggleFeeType();
+
+        //---- tier bands: the table edits the hidden TiersJson field ----
+        var $tiersJson = $('#@Html.IdFor(m => m.TiersJson)');
+        var $tierBody = $('#handling-fee-tiers tbody');
+
+        function addTierRow(upTo, fee) {
+            var $row = $('<tr>' +
+                '<td><input type="number" step="0.01" min="0" class="form-control tier-up-to" /></td>' +
+                '<td><input type="number" step="0.01" min="0" class="form-control tier-fee" /></td>' +
+                '<td><button type="button" class="btn btn-default btn-sm tier-remove" aria-label="Remove"><i class="fas fa-trash"></i></button></td>' +
+                '</tr>');
+            $row.find('.tier-up-to').val(upTo);
+            $row.find('.tier-fee').val(fee);
+            $tierBody.append($row);
+        }
+
+        function writeTiers() {
+            var tiers = [];
+            $tierBody.find('tr').each(function () {
+                var upTo = parseFloat($(this).find('.tier-up-to').val());
+                var fee = parseFloat($(this).find('.tier-fee').val());
+                if (!isNaN(upTo) || !isNaN(fee))
+                    tiers.push({ UpTo: isNaN(upTo) ? -1 : upTo, Fee: isNaN(fee) ? 0 : fee });
+            });
+            $tiersJson.val(JSON.stringify(tiers));
+        }
+
+        try {
+            $.each(JSON.parse($tiersJson.val() || '[]'), function (_, tier) { addTierRow(tier.UpTo, tier.Fee); });
+        } catch (e) {
+        }
+        if (!$tierBody.find('tr').length)
+            addTierRow('', '');
+
+        $('#handling-fee-add-tier').on('click', function () {
+            addTierRow('', '');
+            writeTiers();
+        });
+        $tierBody.on('click', '.tier-remove', function () {
+            $(this).closest('tr').remove();
+            writeTiers();
+            schedulePreview();
+        });
+        $tierBody.on('input change', 'input', writeTiers);
+
+        //---- excluded product names, refreshed after the picker popup writes ids ----
+        var $productIds = $('#@Html.IdFor(m => m.ExcludedProductIds)');
+        function loadProductNames() {
+            $.ajax({
+                cache: false,
+                type: 'POST',
+                url: '@Url.Action("LoadProductFriendlyNames", "MiscHandlingFee")',
+                data: addAntiForgeryToken({ productIds: $productIds.val() }),
+                success: function (data) { $('#handling-fee-product-names').text(data.Text); }
+            });
+        }
+        $('#handling-fee-refresh-products').on('click', function () {
+            loadProductNames();
+            schedulePreview();
+            return false;
+        });
+        loadProductNames();
+
+        //---- live summary and tester: the server runs the real rule on the unsaved form ----
+        var previewTimer = null;
+        function schedulePreview() {
+            clearTimeout(previewTimer);
+            previewTimer = setTimeout(runPreview, 300);
+        }
+
+        function runPreview() {
+            writeTiers();
+            $.ajax({
+                cache: false,
+                type: 'POST',
+                url: '@Url.Action("PreviewRule", "MiscHandlingFee")',
+                data: $form.serialize(),
+                success: function (data) {
+                    var $summary = $('#handling-fee-summary').empty();
+                    $.each(data.Summary, function (_, sentence) { $('<p>').text(sentence).appendTo($summary); });
+                    $('#handling-fee-result')
+                        .text(data.Result)
+                        .toggleClass('applied', data.Applied)
+                        .toggleClass('not-applied', !data.Applied);
+                }
+            });
+        }
+
+        $form.on('input change', 'input, select, textarea', schedulePreview);
+        runPreview();
+    });
+</script>

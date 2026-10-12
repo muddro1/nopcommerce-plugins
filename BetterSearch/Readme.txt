@@ -1,6 +1,6 @@
 Better product search
 ======================
-For nopCommerce 4.50.
+For nopCommerce 4.50 (version 1.00) and nopCommerce 4.90 (version 2.00).
 
 Replaces nopCommerce's product search with a relevance-ranked index, built
 with Lucene.NET, that matches SKUs by substring and tolerates typos in
@@ -343,3 +343,49 @@ global.json and the project files target: it tells the .NET host to roll
 forward to the highest installed major version instead of failing to find
 a matching net6.0 runtime. It is harmless, and unnecessary, on a machine
 that does have the net6.0 runtime installed.
+
+
+nopCommerce 4.90 build (version 2.00)
+--------------------------------------
+"nopCommerce 4.90" holds a separate build for nopCommerce 4.90, next to the
+"nopCommerce 4.50" one: "Misc.BetterSearch" is the compiled plugin and
+"Nop.Plugin.Misc.BetterSearch" the source. It behaves exactly like 1.00; only
+what nopCommerce 4.90 changed underneath was ported. It is built against
+nopCommerce 4.90.8 and targets net9.0. Install it, and upgrade from an
+earlier 2.x, exactly as described above. The 4.50 build does not load on
+4.90, and the 4.90 build does not load on 4.50.
+
+nopCommerce 4.90 can route keyword searches to a search provider plugin
+(for example nopCommerce's own "Lucene search"). While this plugin is
+enabled and its index is available, its ranking replaces the stock
+keyword search entirely, so an active search provider is bypassed. When
+this plugin is disabled, or falls back because the index is unavailable,
+nopCommerce's normal behaviour applies again - including any active
+search provider. Running both at once gains nothing; pick one.
+
+The deploy allow-list above applies to the 4.90 build unchanged - the
+same ten files.
+
+Moving a store from nopCommerce 4.50 to 4.90 with this plugin installed:
+Do NOT uninstall the 1.00 build first - uninstalling deletes
+its settings and its scheduled rebuild task. Instead:
+
+  1. Upgrade nopCommerce itself, following nopCommerce's own upgrade
+     instructions.
+  2. Before starting the upgraded site, replace the "Misc.BetterSearch"
+     folder in \Plugins with the one from "nopCommerce 4.90".
+  3. Start the site. nopCommerce sees the version change from 1.00 to
+     2.00 and runs the plugin's update step, as for any upgrade above.
+
+Building the 4.90 source: same steps as above, but inside a nopCommerce
+4.90 source tree. Its global.json pins SDK 9.0.100. With only a newer SDK
+installed, change "rollForward" to "latestMajor" there, and set
+DOTNET_ROLL_FORWARD=Major so the post-build helper (now a net9.0 app) can
+run. The same Nop.Web.* host files still need deleting from the output.
+
+Running the 4.90 tests: the suite is under "nopCommerce 4.90/Tests". Copy
+"Nop.Plugin.Misc.BetterSearch.Tests" into src/Tests/ of the 4.90 source tree,
+next to the plugin in src/Plugins/, and run it from there with
+DOTNET_ROLL_FORWARD=Major dotnet test, exactly as described for 4.50
+above. The tree's Directory.Build.props turns on implicit usings, which the
+4.90 test sources already account for.

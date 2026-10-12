@@ -1,0 +1,13 @@
+@inherits Nop.Web.Framework.Mvc.Razor.NopRazorPage<TModel>
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@addTagHelper *, Nop.Web.Framework
+@inject IWorkContext workContext
+@inject IGenericAttributeService genericAttributeService
+
+@using Microsoft.AspNetCore.Mvc.Rendering
+@using Nop.Core
+@using Nop.Services.Common
+@using Nop.Web.Areas.Admin.Models.Catalog
+@using Nop.Web.Framework.UI
+@using Nop.Web.Framework.Extensions
+@using Nop.Web.Framework.Models.DataTables

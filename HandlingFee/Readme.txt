@@ -1,6 +1,6 @@
 Handling fee for small orders
 ==============================
-For nopCommerce 4.50.
+For nopCommerce 4.50 (version 1.03) and nopCommerce 4.90 (version 2.10).
 
 Adds a configurable handling fee to physical orders that are at or below a
 threshold value and ship for free. It is meant for stores that offer free
@@ -254,3 +254,112 @@ global.json and the project files target: it tells the .NET host to roll
 forward to the highest installed major version instead of failing to find
 a matching net6.0 runtime. It is harmless, and unnecessary, on a machine
 that does have the net6.0 runtime installed.
+
+
+nopCommerce 4.90 build (version 2.10)
+--------------------------------------
+"nopCommerce 4.90" holds a separate build for nopCommerce 4.90, next to the
+"nopCommerce 4.50" one: "Misc.HandlingFee" is the compiled plugin and
+"Nop.Plugin.Misc.HandlingFee" the source. Out of the box it behaves exactly
+like 1.03; 2.10 adds the rule options described below, all of which default
+to the 1.03 behaviour. It is built against
+nopCommerce 4.90.8 and targets net9.0. Install it, and upgrade from an
+earlier 2.x, exactly as described above. The 4.50 build does not load on
+4.90, and the 4.90 build does not load on 4.50.
+
+HandlingFeeOrderTotalCalculationService carries a copy of nopCommerce's
+GetShoppingCartTotalAsync. For the 4.90 build it was re-diffed against
+nopCommerce 4.90.8 (OrderTotalCalculationService.cs, lines 1313-1404):
+core's method is unchanged from 4.50.2 apart from whitespace, so the only
+difference remains the deliberately dropped payment-method guard. The
+payment-method additional-fee channel the fee rides on is also unchanged
+in 4.90.
+
+The one resource that did change is the PDF invoice label. nopCommerce
+4.60 replaced "PDFInvoice.PaymentMethodAdditionalFee" with
+"Pdf.PaymentMethodAdditionalFee", and its upgrade deletes the old one, so
+the 4.90 build writes a custom label into the new resource instead. The
+4.90 PDF builder adds its own colon after the label, so that resource
+holds the label without one. When a store with a custom label is upgraded
+from 1.03, the update step backs up the new resource's original wording
+before writing the label into it, and drops the old resource from the
+backup. Clearing the label or uninstalling then restores the 4.90 wording
+and does not bring back the deleted resource.
+
+Rule options (2.10)
+- - - - - - - - - -
+The Configure page is organised into cards:
+
+  Rule summary
+      A plain-English sentence describing the rule as it stands on the page,
+      updated as you edit - before you save. Below it, "Try a cart" lets you
+      enter a hypothetical cart (subtotal, shipping charge, customer role,
+      destination, shipping method) and shows whether the fee would apply and
+      which condition decided it. Both use the same calculation checkout
+      uses.
+
+  Fee amount
+      Flat amount (as before), Percentage of subtotal (with an optional
+      minimum and maximum; 0 means none), or Tiered bands - "subtotal up to X
+      pays Y", with no fee above the highest band. For tiered fees the bands
+      replace the order threshold.
+      When "Round prices during calculation" is on (Configuration >
+      Settings > Shopping cart settings), a percentage fee is rounded the
+      way the primary currency rounds prices (for example up to the next
+      0.05), after the minimum and
+      maximum are applied - so it can end up a fraction of a rounding step
+      above the maximum. Flat and tiered fees are charged exactly as
+      entered.
+
+  When the fee applies
+      Measure subtotal: after discounts (as before), or before order-subtotal
+      discounts. Product-level discounts are always taken off first.
+      Require a shipped item: untick to charge downloadable-only orders too.
+      No fee when shipping is charged: as before.
+      Only these shipping methods: empty means every method. Pick a whole
+      provider - "UPS (any service)" - or a method from Configuration >
+      Shipping > Shipping methods. A method is stored by its id and
+      recognised by its name in every language, so it keeps working for
+      shoppers in other languages and after a rename. Pickup in store is
+      neither, so a shipping-method filter leaves pickup orders out.
+      Only these countries: matched against the shipping address, or, for
+      pickup in store, the pickup point's country.
+      Exempt customer roles: customers in any of these never pay the fee.
+
+  Excluded products & categories
+      Pick categories (their subcategories are included) and products. Then
+      choose what an excluded item does: waive the fee for the whole order,
+      or leave it out - it then doesn't count toward the subtotal and doesn't
+      make the order count as physical. An order made up only of excluded items
+      never pays the fee in either mode.
+
+Before the customer has chosen a shipping method or entered an address, the
+method and country conditions count as met. The fee can then drop off at
+checkout once they are known, but it never appears for the first time at the
+last step.
+
+Every new setting can be overridden per store, like the existing ones.
+
+Moving a store from nopCommerce 4.50 to 4.90 with this plugin installed:
+Do NOT uninstall the 1.03 build first - uninstalling deletes
+its settings and its locale resources. Instead:
+
+  1. Upgrade nopCommerce itself, following nopCommerce's own upgrade
+     instructions.
+  2. Before starting the upgraded site, replace the "Misc.HandlingFee"
+     folder in \Plugins with the one from "nopCommerce 4.90".
+  3. Start the site. nopCommerce sees the version change from 1.03 to
+     2.10 and runs the plugin's update step, as for any upgrade above.
+
+Building the 4.90 source: same steps as above, but inside a nopCommerce
+4.90 source tree. Its global.json pins SDK 9.0.100. With only a newer SDK
+installed, change "rollForward" to "latestMajor" there, and set
+DOTNET_ROLL_FORWARD=Major so the post-build helper (now a net9.0 app) can
+run. The same Nop.Web.* host files still need deleting from the output.
+
+Running the 4.90 tests: the suite is under "nopCommerce 4.90/Tests". Copy
+"Nop.Plugin.Misc.HandlingFee.Tests" into src/Tests/ of the 4.90 source tree,
+next to the plugin in src/Plugins/, and run it from there with
+DOTNET_ROLL_FORWARD=Major dotnet test, exactly as described for 4.50
+above. The tree's Directory.Build.props turns on implicit usings, which the
+4.90 test sources already account for.
