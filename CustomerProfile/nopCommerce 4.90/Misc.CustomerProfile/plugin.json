@@ -1,0 +1,14 @@
+{
+  "Group": "Misc",
+  "FriendlyName": "Customer profile (dealership, tax exemption, Net 30, contacts)",
+  "SystemName": "Misc.CustomerProfile",
+  "Version": "1.0.0",
+  "SupportedVersions": [ "4.90" ],
+  "Author": "Custom",
+  "DisplayOrder": 1,
+  "FileName": "Nop.Plugin.Misc.CustomerProfile.dll",
+  "Description": "BMW dealership field, tax exemption certificates with expiry reminders, Net 30 payment for selected customers, and secondary contacts who receive chosen customer emails",
+  "LimitedToStores": [],
+  "LimitedToCustomerRoles": [],
+  "DependsOnSystemNames": []
+}

@@ -1,0 +1,106 @@
+@model TaxExemptionPageModel
+@using Nop.Web.Components
+@using Nop.Plugin.Misc.CustomerProfile.Logic
+@inject Nop.Services.Helpers.IDateTimeHelper DateTimeHelper
+@{
+    Layout = "_ColumnsTwo";
+    const string P = CustomerProfileDefaults.LocalePrefix;
+    NopHtml.AddTitleParts(T(P + "TaxExemption").Text);
+    NopHtml.AppendPageCssClassParts("html-account-page");
+    NopHtml.AppendPageCssClassParts("html-customer-profile-page");
+}
+
+@section left
+{
+    @await Component.InvokeAsync(typeof(CustomerNavigationViewComponent), new { selectedTabId = -1 })
+}
+
+<div class="page account-page customer-profile-page">
+    <div class="page-title">
+        <h1>@T("Account.MyAccount") - @T(P + "TaxExemption")</h1>
+    </div>
+    <div class="page-body">
+        <div class="section">
+            @if (Model.CurrentValid != null)
+            {
+                <p><strong>@string.Format(T(P + "TaxExemption.Status.Valid").Text, Model.CurrentValid.ExpiresOn!.Value.ToShortDateString())</strong></p>
+            }
+            else if (Model.LatestExpired != null)
+            {
+                <p><strong>@string.Format(T(P + "TaxExemption.Status.Expired").Text, Model.LatestExpired.ExpiresOn?.ToShortDateString())</strong></p>
+            }
+            else if (!Model.HasPending)
+            {
+                <p>@T(P + "TaxExemption.Status.None")</p>
+            }
+            @if (Model.HasPending)
+            {
+                <p>@T(P + "TaxExemption.Status.Pending")</p>
+            }
+        </div>
+
+        <div asp-validation-summary="All" class="message-error"></div>
+
+        <form method="post" action="@Url.RouteUrl("CustomerProfile.TaxExemptionUpload")" enctype="multipart/form-data">
+            <div class="fieldset">
+                <div class="title"><strong>@T(P + "TaxExemption.Upload")</strong></div>
+                <div class="form-fields">
+                    <div class="inputs">
+                        <label for="file">@T(P + "TaxExemption.File"):</label>
+                        <input id="file" name="file" type="file" accept="@UploadValidator.AcceptAttribute" />
+                        <nop-required />
+                        <span class="hint" style="display:block">@string.Format(T(P + "TaxExemption.File.Hint").Text, Model.MaxUploadSizeMb)</span>
+                    </div>
+                    <div class="inputs">
+                        <label for="expiresOn">@T(P + "TaxExemption.ExpiresOn"):</label>
+                        <input id="expiresOn" name="expiresOn" type="date" min="@Model.Today.ToString("yyyy-MM-dd")" />
+                        <span class="hint" style="display:block">@T(P + "TaxExemption.ExpiresOn.Hint")</span>
+                    </div>
+                    <div class="inputs">
+                        <label for="certificateNumber">@T(P + "TaxExemption.CertificateNumber"):</label>
+                        <input id="certificateNumber" name="certificateNumber" type="text" maxlength="100" />
+                    </div>
+                    <div class="inputs">
+                        <label for="issuingState">@T(P + "TaxExemption.IssuingState"):</label>
+                        <input id="issuingState" name="issuingState" type="text" maxlength="100" />
+                    </div>
+                </div>
+            </div>
+            <div class="buttons">
+                <button type="submit" class="button-1">@T(P + "TaxExemption.Upload")</button>
+            </div>
+        </form>
+
+        @if (Model.Certificates.Any())
+        {
+            <div class="section">
+                <div class="title"><strong>@T(P + "TaxExemption.History")</strong></div>
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>@T(P + "TaxExemption.UploadedOn")</th>
+                                <th>@T(P + "TaxExemption.State")</th>
+                                <th>@T(P + "TaxExemption.ExpiresOn")</th>
+                                <th>@T(P + "TaxExemption.ReviewNote")</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var cert in Model.Certificates)
+                            {
+                                <tr>
+                                    <td>@((await DateTimeHelper.ConvertToUserTimeAsync(cert.UploadedOnUtc, DateTimeKind.Utc)).ToShortDateString())</td>
+                                    <td>@T(P + "TaxExemption.State." + cert.State)</td>
+                                    <td>@cert.ExpiresOn?.ToShortDateString()</td>
+                                    <td>@cert.ReviewNote</td>
+                                    <td><a href="@Url.RouteUrl(CustomerProfileDefaults.RouteCertificateFile, new { id = cert.Id })" target="_blank" rel="noopener">@T(P + "TaxExemption.View")</a></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+    </div>
+</div>
