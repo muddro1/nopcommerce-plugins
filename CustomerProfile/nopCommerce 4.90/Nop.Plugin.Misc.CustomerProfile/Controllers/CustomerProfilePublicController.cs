@@ -1,6 +1,9 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Nop.Core;
 using Nop.Core.Domain.Customers;
+using Nop.Plugin.Misc.CustomerProfile.Domain;
+using Nop.Plugin.Misc.CustomerProfile.Logic;
 using Nop.Plugin.Misc.CustomerProfile.Models;
 using Nop.Plugin.Misc.CustomerProfile.Services;
 using Nop.Services.Customers;
@@ -16,29 +19,39 @@ public partial class CustomerProfilePublicController : BasePluginController
 {
     private const string BusinessDetailsView = CustomerProfileDefaults.ViewsPath + "/Public/BusinessDetails.cshtml";
     private const string ContactEditView = CustomerProfileDefaults.ViewsPath + "/Public/ContactEdit.cshtml";
+    private const string TaxExemptionView = CustomerProfileDefaults.ViewsPath + "/Public/TaxExemption.cshtml";
 
+    private readonly CustomerProfileSettings _settings;
     private readonly ContactEditor _contactEditor;
     private readonly IBusinessProfileService _profileService;
     private readonly ICustomerContactService _contactService;
     private readonly ICustomerService _customerService;
     private readonly ILocalizationService _localizationService;
     private readonly INotificationService _notificationService;
+    private readonly IStoreClock _clock;
+    private readonly ITaxExemptionService _taxExemptionService;
     private readonly IWorkContext _workContext;
 
-    public CustomerProfilePublicController(ContactEditor contactEditor,
+    public CustomerProfilePublicController(CustomerProfileSettings settings,
+        ContactEditor contactEditor,
         IBusinessProfileService profileService,
         ICustomerContactService contactService,
         ICustomerService customerService,
         ILocalizationService localizationService,
         INotificationService notificationService,
+        IStoreClock clock,
+        ITaxExemptionService taxExemptionService,
         IWorkContext workContext)
     {
+        _settings = settings;
         _contactEditor = contactEditor;
         _profileService = profileService;
         _contactService = contactService;
         _customerService = customerService;
         _localizationService = localizationService;
         _notificationService = notificationService;
+        _clock = clock;
+        _taxExemptionService = taxExemptionService;
         _workContext = workContext;
     }
 
@@ -161,6 +174,72 @@ public partial class CustomerProfilePublicController : BasePluginController
 
         _notificationService.SuccessNotification(await TAsync("Contacts.Deleted"));
         return RedirectToRoute(CustomerProfileDefaults.RouteBusinessDetails);
+    }
+
+    #endregion
+
+    #region Tax exemption
+
+    private async Task<TaxExemptionPageModel> PrepareTaxExemptionAsync(Customer customer)
+    {
+        var certificates = await _taxExemptionService.GetForCustomerAsync(customer.Id);
+        return new TaxExemptionPageModel
+        {
+            CurrentValid = await _taxExemptionService.GetCurrentValidAsync(customer.Id),
+            LatestExpired = certificates.Where(c => c.State == CertificateState.Expired).MaxBy(c => c.ExpiresOn),
+            HasPending = certificates.Any(c => c.State == CertificateState.PendingReview),
+            Certificates = certificates,
+            MaxUploadSizeMb = _settings.MaxUploadSizeMb,
+            Today = _clock.Today
+        };
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> TaxExemption()
+    {
+        var customer = await GetRegisteredCustomerAsync();
+        if (customer == null)
+            return Challenge();
+
+        return View(TaxExemptionView, await PrepareTaxExemptionAsync(customer));
+    }
+
+    [HttpPost]
+    [RequestFormLimits(MultipartBodyLengthLimit = 26 * 1024 * 1024)]
+    [RequestSizeLimit(26 * 1024 * 1024)]
+    public async Task<IActionResult> TaxExemptionUpload(IFormFile? file, DateTime? expiresOn, string? certificateNumber, string? issuingState)
+    {
+        var customer = await GetRegisteredCustomerAsync();
+        if (customer == null)
+            return Challenge();
+
+        var errors = await _taxExemptionService.UploadAsync(customer.Id, file, expiresOn, certificateNumber, issuingState,
+            customer.Id, approveImmediately: false);
+        if (errors.Any())
+        {
+            foreach (var error in errors)
+                ModelState.AddModelError(string.Empty, error);
+            return View(TaxExemptionView, await PrepareTaxExemptionAsync(customer));
+        }
+
+        _notificationService.SuccessNotification(await TAsync("TaxExemption.Uploaded"));
+        return RedirectToRoute(CustomerProfileDefaults.RouteTaxExemption);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> CertificateFile(int id)
+    {
+        var customer = await GetRegisteredCustomerAsync();
+        if (customer == null)
+            return Challenge();
+
+        // 404 rather than 403 for someone else's certificate, so ids can't be probed
+        var (certificate, download) = await _taxExemptionService.GetFileAsync(id);
+        if (certificate == null || download == null || certificate.CustomerId != customer.Id)
+            return NotFound();
+
+        Response.Headers["X-Content-Type-Options"] = "nosniff";
+        return File(download.DownloadBinary, certificate.ContentType, certificate.FileName);
     }
 
     #endregion

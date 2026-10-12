@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Nop.Plugin.Misc.CustomerProfile.Domain;
 using Nop.Plugin.Misc.CustomerProfile.Models;
@@ -78,6 +79,74 @@ public partial class CustomerProfileAdminController
             Certificates = certificates,
             Today = _clock.Today
         });
+    }
+
+    private async Task<bool?> IsTaxExemptAsync(int certificateId)
+    {
+        var certificate = await _taxExemptionService.GetByIdAsync(certificateId);
+        var customer = certificate == null ? null : await _customerService.GetCustomerByIdAsync(certificate.CustomerId);
+        return customer?.IsTaxExempt;
+    }
+
+    [HttpPost]
+    [RequestFormLimits(MultipartBodyLengthLimit = 26 * 1024 * 1024)]
+    [RequestSizeLimit(26 * 1024 * 1024)]
+    public async Task<IActionResult> CertificateUpload(int customerId, IFormFile? file, DateTime? expiresOn,
+        string? certificateNumber, string? issuingState)
+    {
+        if (!await CanEditCustomersAsync())
+            return Failure(await _localizationService.GetResourceAsync("Admin.AccessDenied.Description"));
+
+        var customer = await _customerService.GetCustomerByIdAsync(customerId);
+        if (customer == null)
+            return Failure(await TAsync("NotFound"));
+
+        var admin = await _workContext.GetCurrentCustomerAsync();
+        var errors = await _taxExemptionService.UploadAsync(customerId, file, expiresOn, certificateNumber, issuingState,
+            admin.Id, approveImmediately: true);
+        if (errors.Any())
+            return Failure(errors.ToArray());
+
+        customer = await _customerService.GetCustomerByIdAsync(customerId);
+        return Json(new { success = true, isTaxExempt = customer?.IsTaxExempt });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> CertificateApprove(int id, DateTime? expiresOn, string? note)
+    {
+        if (!await CanEditCustomersAsync())
+            return Failure(await _localizationService.GetResourceAsync("Admin.AccessDenied.Description"));
+
+        var admin = await _workContext.GetCurrentCustomerAsync();
+        var errors = await _taxExemptionService.ApproveAsync(id, expiresOn, admin.Id, note);
+        return errors.Any()
+            ? Failure(errors.ToArray())
+            : Json(new { success = true, isTaxExempt = await IsTaxExemptAsync(id) });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> CertificateReject(int id, string? note)
+    {
+        if (!await CanEditCustomersAsync())
+            return Failure(await _localizationService.GetResourceAsync("Admin.AccessDenied.Description"));
+
+        var admin = await _workContext.GetCurrentCustomerAsync();
+        var errors = await _taxExemptionService.RejectAsync(id, admin.Id, note);
+        return errors.Any() ? Failure(errors.ToArray()) : Json(new { success = true });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> CertificateFile(int id)
+    {
+        if (!await CanViewCustomersAsync())
+            return AccessDeniedView();
+
+        var (certificate, download) = await _taxExemptionService.GetFileAsync(id);
+        if (certificate == null || download == null)
+            return NotFound();
+
+        Response.Headers["X-Content-Type-Options"] = "nosniff";
+        return File(download.DownloadBinary, certificate.ContentType, certificate.FileName);
     }
 
     #endregion
