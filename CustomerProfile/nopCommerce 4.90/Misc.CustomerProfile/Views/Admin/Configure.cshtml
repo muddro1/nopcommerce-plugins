@@ -1,0 +1,118 @@
+@model SettingsModel
+@{
+    Layout = "_AdminLayout";
+    NopHtml.SetActiveMenuItemSystemName(CustomerProfileDefaults.MenuSettings);
+    ViewBag.Title = T("Plugins.Misc.CustomerProfile.Settings").Text;
+    const string P = CustomerProfileDefaults.LocalePrefix + "Settings.";
+}
+
+<form asp-action="Configure" method="post">
+    <div class="content-header clearfix">
+        <h1 class="float-left">
+            Customer Profile
+            <small>Settings</small>
+        </h1>
+        <div class="float-right">
+            <button type="submit" class="btn btn-primary">
+                <i class="far fa-save"></i> @T("Admin.Common.Save")
+            </button>
+        </div>
+    </div>
+
+    <section class="content">
+        <div class="container-fluid">
+            <div asp-validation-summary="All"></div>
+
+            <div class="card card-default">
+                <div class="card-header"><h3 class="card-title">@T("Plugins.Misc.CustomerProfile.TaxExemption")</h3></div>
+                <div class="card-body">
+                    <div class="form-group row">
+                        <div class="col-md-3"><nop-label asp-for="ReminderDaysBeforeExpiry" /></div>
+                        <div class="col-md-9">
+                            <nop-editor asp-for="ReminderDaysBeforeExpiry" />
+                            <small class="form-text text-muted">@T(P + "ReminderDaysBeforeExpiry.Hint")</small>
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="col-md-3"><nop-label asp-for="PendingReviewNudgeDays" /></div>
+                        <div class="col-md-9">
+                            <nop-editor asp-for="PendingReviewNudgeDays" />
+                            <small class="form-text text-muted">@T(P + "PendingReviewNudgeDays.Hint")</small>
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="col-md-3"><nop-label asp-for="ApproveMarksTaxExempt" /></div>
+                        <div class="col-md-9">
+                            <nop-editor asp-for="ApproveMarksTaxExempt" />
+                            <small class="form-text text-muted">@T(P + "ApproveMarksTaxExempt.Hint")</small>
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="col-md-3"><nop-label asp-for="RemoveExemptionOnExpiry" /></div>
+                        <div class="col-md-9">
+                            <nop-editor asp-for="RemoveExemptionOnExpiry" />
+                            <small class="form-text text-muted">@T(P + "RemoveExemptionOnExpiry.Hint")</small>
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="col-md-3"><nop-label asp-for="MaxUploadSizeMb" /></div>
+                        <div class="col-md-9"><nop-editor asp-for="MaxUploadSizeMb" /></div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="col-md-3"><nop-label asp-for="NotificationCcEmails" /></div>
+                        <div class="col-md-9">
+                            <nop-editor asp-for="NotificationCcEmails" />
+                            <small class="form-text text-muted">@T(P + "NotificationCcEmails.Hint")</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card card-default">
+                <div class="card-header"><h3 class="card-title">@T("Plugins.Misc.CustomerProfile.Net30")</h3></div>
+                <div class="card-body">
+                    <div class="form-group row">
+                        <div class="col-md-3"><nop-label asp-for="Net30DefaultTermsDays" /></div>
+                        <div class="col-md-9"><nop-editor asp-for="Net30DefaultTermsDays" /></div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="col-md-3"><nop-label asp-for="Net30OverdueReminderEnabled" /></div>
+                        <div class="col-md-9">
+                            <nop-editor asp-for="Net30OverdueReminderEnabled" />
+                            <small class="form-text text-muted">@T(P + "Net30OverdueReminderEnabled.Hint")</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</form>
+
+<section class="content">
+    <div class="container-fluid">
+        <div class="card card-default">
+            <div class="card-header"><h3 class="card-title">@T(CustomerProfileDefaults.LocalePrefix + "Data")</h3></div>
+            <div class="card-body">
+                <p>@T(CustomerProfileDefaults.LocalePrefix + "Data.KeptOnUninstall")</p>
+
+                <p>
+                    <a class="btn btn-default" asp-action="Export" asp-route-filter="All">
+                        <i class="fas fa-file-archive"></i> @T(CustomerProfileDefaults.LocalePrefix + "Data.Export")
+                    </a>
+                    <br /><small class="text-muted">@T(CustomerProfileDefaults.LocalePrefix + "Data.Export.Hint")</small>
+                </p>
+
+                <hr />
+                @* A separate form: the settings form above posts to Configure *@
+                <form asp-action="DeleteAllData" method="post" class="form-inline">
+                    <input type="text" name="confirmation" class="form-control mr-2" autocomplete="off" style="max-width: 140px"
+                           placeholder="@Nop.Plugin.Misc.CustomerProfile.Controllers.CustomerProfileAdminController.DeleteConfirmationWord" />
+                    <button type="submit" class="btn btn-danger">
+                        <i class="far fa-trash-alt"></i> @T(CustomerProfileDefaults.LocalePrefix + "Data.Delete")
+                    </button>
+                </form>
+                <small class="text-muted">@string.Format(T(CustomerProfileDefaults.LocalePrefix + "Data.Delete.Hint").Text, Nop.Plugin.Misc.CustomerProfile.Controllers.CustomerProfileAdminController.DeleteConfirmationWord)</small>
+            </div>
+        </div>
+    </div>
+</section>

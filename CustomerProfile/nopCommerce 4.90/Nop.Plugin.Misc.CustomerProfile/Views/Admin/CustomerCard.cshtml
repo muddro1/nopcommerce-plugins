@@ -1,0 +1,160 @@
+@model AdminCustomerCardModel
+@inject Nop.Core.IWorkContext WorkContext
+@inject Nop.Services.Common.IGenericAttributeService GenericAttributeService
+@{
+    const string P = CustomerProfileDefaults.LocalePrefix;
+
+    // Same pattern as core's cards on this page: nop-card requires both, and remembers collapse state per admin
+    const string hideBlockAttributeName = "CustomerPage.HideBusinessProfileBlock";
+    var hideBlock = await GenericAttributeService.GetAttributeAsync<bool>(await WorkContext.GetCurrentCustomerAsync(), hideBlockAttributeName);
+}
+
+@*
+    This card sits inside the core customer <form>. Dealership and Net 30 post with the page's Save button
+    and are saved by the ModelReceived consumer. Certificates and contacts use their own AJAX buttons:
+    no nested <form> elements, and their inputs have no name attributes so they don't post with Save.
+*@
+<nop-card asp-name="customer-profile" asp-icon="fas fa-id-card" asp-title="@T(P + "Card.Title").Text"
+          asp-hide-block-attribute-name="@hideBlockAttributeName" asp-hide="@hideBlock" asp-advanced="false">
+    <div class="card-body">
+        @if (Model.CustomerId == 0)
+        {
+            <p class="text-muted">@T(P + "Card.SaveFirst")</p>
+        }
+        else
+        {
+            <div class="form-group row">
+                <div class="col-md-3">
+                    <label class="col-form-label" for="cp-dealership">@T(P + "Dealership")</label>
+                </div>
+                <div class="col-md-9">
+                    <input id="cp-dealership" class="form-control" name="@CustomerProfileDefaults.FieldDealership"
+                           value="@Model.BmwDealership" maxlength="@CustomerProfileDefaults.DealershipMaxLength"
+                           @(Model.CanEdit ? "" : "readonly") />
+                </div>
+            </div>
+
+            <div class="form-group row">
+                <div class="col-md-3">
+                    <label class="col-form-label" for="cp-net30">@T(P + "Net30.Enabled")</label>
+                </div>
+                <div class="col-md-9">
+                    @* Plain checkbox like core's own on this page: Bootstrap's form-check-input is absolutely
+                       positioned and, with no label beside it, sits on top of the hint *@
+                    <input id="cp-net30" type="checkbox" name="@CustomerProfileDefaults.FieldNet30Enabled"
+                           value="true" @(Model.Net30Enabled ? "checked" : "") @(Model.CanEdit ? "" : "disabled") />
+                    <input type="hidden" name="@CustomerProfileDefaults.FieldNet30Enabled" value="false" />
+                    <small class="form-text text-muted">@T(P + "Net30.Enabled.Hint")</small>
+                </div>
+            </div>
+
+            <div class="form-group row">
+                <div class="col-md-3">
+                    <label class="col-form-label" for="cp-net30-terms">@T(P + "Net30.TermsDays")</label>
+                </div>
+                <div class="col-md-9">
+                    <input id="cp-net30-terms" class="form-control" type="number" min="1" max="365" style="max-width: 120px"
+                           name="@CustomerProfileDefaults.FieldNet30TermsDays" value="@Model.Net30TermsDays"
+                           @(Model.CanEdit ? "" : "readonly") />
+                    <small class="form-text text-muted">@T(P + "Net30.TermsDays.Hint")</small>
+                </div>
+            </div>
+
+            <hr />
+            <h5>@T(P + "TaxExemption")</h5>
+            <div id="cp-certificates" data-customer-id="@Model.CustomerId" data-url="@Url.Action("CertificateList", "CustomerProfileAdmin", new { area = "Admin", customerId = Model.CustomerId })">
+                <span class="text-muted"><i class="fas fa-spinner fa-spin"></i></span>
+            </div>
+
+            @if (Model.CanEdit)
+            {
+                <div class="border rounded p-3 mt-2" id="cp-certificate-upload">
+                    <strong>@T(P + "TaxExemption.Upload")</strong>
+                    <div class="form-row mt-2">
+                        <div class="col-md-4">
+                            <label for="cp-cert-file">@T(P + "TaxExemption.File")</label>
+                            <input id="cp-cert-file" type="file" class="form-control-file" accept="@Nop.Plugin.Misc.CustomerProfile.Logic.UploadValidator.AcceptAttribute" />
+                            <small class="text-muted">@string.Format(T(P + "TaxExemption.File.Hint").Text, Model.MaxUploadSizeMb)</small>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="cp-cert-expires">@T(P + "TaxExemption.ExpiresOn")</label>
+                            <input id="cp-cert-expires" type="date" class="form-control" />
+                        </div>
+                        <div class="col-md-3">
+                            <label for="cp-cert-number">@T(P + "TaxExemption.CertificateNumber")</label>
+                            <input id="cp-cert-number" class="form-control" maxlength="100" />
+                        </div>
+                        <div class="col-md-2">
+                            <label for="cp-cert-state">@T(P + "TaxExemption.IssuingState")</label>
+                            <input id="cp-cert-state" class="form-control" maxlength="100" />
+                        </div>
+                        <div class="col-md-1 d-flex align-items-end">
+                            <button type="button" class="btn btn-primary" id="cp-cert-upload-btn"
+                                    data-url="@Url.Action("CertificateUpload", "CustomerProfileAdmin", new { area = "Admin" })">
+                                <i class="fas fa-upload"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="text-danger small mt-1" id="cp-cert-upload-error"></div>
+                </div>
+            }
+
+            <hr />
+            <h5>@T(P + "Contacts")</h5>
+            <p class="text-muted small">@T(P + "Contacts.Hint")</p>
+            <div id="cp-contacts" data-customer-id="@Model.CustomerId" data-url="@Url.Action("ContactList", "CustomerProfileAdmin", new { area = "Admin", customerId = Model.CustomerId })">
+                <span class="text-muted"><i class="fas fa-spinner fa-spin"></i></span>
+            </div>
+
+            @if (Model.CanEdit)
+            {
+                <div class="border rounded p-3 mt-2" id="cp-contact-form" data-url="@Url.Action("ContactSave", "CustomerProfileAdmin", new { area = "Admin" })">
+                    <strong id="cp-contact-form-title" data-add="@T(P + "Contacts.Add")" data-edit="@T(P + "Contacts.Edit")">@T(P + "Contacts.Add")</strong>
+                    <input type="hidden" id="cp-contact-id" value="0" />
+                    <div class="form-row mt-2">
+                        <div class="col-md-3">
+                            <label for="cp-contact-name">@T(P + "Contacts.Name")</label>
+                            <input id="cp-contact-name" class="form-control" maxlength="@CustomerProfileDefaults.ContactNameMaxLength" />
+                        </div>
+                        <div class="col-md-3">
+                            <label for="cp-contact-email">@T(P + "Contacts.Email")</label>
+                            <input id="cp-contact-email" type="email" class="form-control" maxlength="@CustomerProfileDefaults.ContactEmailMaxLength" />
+                        </div>
+                        <div class="col-md-3">
+                            <label for="cp-contact-title">@T(P + "Contacts.Title")</label>
+                            <input id="cp-contact-title" class="form-control" maxlength="@CustomerProfileDefaults.ContactTitleMaxLength" />
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <div class="form-check">
+                                <input id="cp-contact-active" type="checkbox" class="form-check-input" checked />
+                                <label class="form-check-label" for="cp-contact-active">@T(P + "Contacts.Active")</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <label>@T(P + "Contacts.Categories")</label>
+                        <div>
+                            @foreach (var category in MessageCategories.All)
+                            {
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input cp-contact-category" type="checkbox" id="cp-cat-@((int)category)" value="@((int)category)" />
+                                    <label class="form-check-label" for="cp-cat-@((int)category)">@T(P + "Category." + category)</label>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <button type="button" class="btn btn-primary btn-sm" id="cp-contact-save">@T(P + "Contacts.Save")</button>
+                        <button type="button" class="btn btn-default btn-sm" id="cp-contact-cancel">@T("Admin.Common.Cancel")</button>
+                    </div>
+                    <div class="text-danger small mt-1" id="cp-contact-error"></div>
+                </div>
+            }
+        }
+    </div>
+</nop-card>
+
+@if (Model.CustomerId > 0)
+{
+    <script asp-location="Footer" src="@Url.Content(CustomerProfileDefaults.AdminScriptPath)"></script>
+}

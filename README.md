@@ -1,6 +1,6 @@
 # nopCommerce plugins
 
-Five plugins for nopCommerce. Four target both **nopCommerce 4.50** and **nopCommerce 4.90** and are kept here as source and as a compiled folder you can drop straight onto a server; the two builds of a plugin behave the same and differ only in the nopCommerce version they compile against. Estimate Builder targets 4.90 only and lives in its own repository, included here as a git submodule (see [Repository layout](#repository-layout)).
+Six plugins for nopCommerce. Four target both **nopCommerce 4.50** and **nopCommerce 4.90** and are kept here as source and as a compiled folder you can drop straight onto a server; the two builds of a plugin behave the same and differ only in the nopCommerce version they compile against. Customer profile targets 4.90 only and follows the same layout. Estimate Builder targets 4.90 only and lives in its own repository, included here as a git submodule (see [Repository layout](#repository-layout)).
 
 | Plugin | System name | Version (4.50 / 4.90) | Does |
 |---|---|---|---|
@@ -9,6 +9,7 @@ Five plugins for nopCommerce. Four target both **nopCommerce 4.50** and **nopCom
 | [Customer has only these products](HasOnlyProducts/Readme.txt) | `DiscountRequirement.HasOnlyProducts` | 1.02 / 2.00 | Discount requirement rule: the cart holds all of the listed products, or any one of them, and optionally nothing else |
 | [Estimate builder](estimate-builder/README.md) | `Misc.EstimateBuilder` | — / 1.3.0 | Customers save products and their options into named estimates, export them to Excel or PDF, or move them to the cart; admins manage every estimate and build quotes for contacts without an account |
 | [Accurate attribute combination pricing](AttributeCombinationPricing/Readme.txt) | `Misc.AttributeCombinationPricing` | 1.01 / 2.00 | Corrects the price label on an Associated-to-Product attribute value - on the product page, cart, checkout and newly placed orders - so it reflects the attribute combination's Overridden price instead of the associated product's own price |
+| [Customer profile](CustomerProfile/Readme.txt) | `Misc.CustomerProfile` | — / 1.0.7 | B2B customer details: BMW dealership, tax exemption certificates with review, expiry reminders and automatic removal, an admin-only Net 30 payment method, and additional contacts who get copies of chosen order emails |
 
 Each plugin has its own `Readme.txt` (Estimate Builder: `README.md`) covering configuration, edge cases and upgrade steps. Read that before deploying. The summaries below only cover what you would want to know before opening one.
 
@@ -48,6 +49,14 @@ Adds "Add To Estimate" to the product page and a My Estimates area to the custom
 
 Prices come from nopCommerce's own pricing - tier, role and special prices, discounts, attribute adjustments, tax display and currency - for the estimate's owner, or at guest prices for contact-only estimates. The admin pages need *Orders. View* to look and *Orders. Create, edit, delete* to change anything, and are closed to vendors.
 
+## Customer profile
+
+Adds a Business profile card to the admin customer page and Business details and Tax exemption pages to My Account. Customers upload tax exemption certificates; an admin approves them with an expiration date, which ticks nopCommerce's own *Is tax exempt* flag. A schedule task emails the customer, their contacts and the store before a certificate expires, and unticks the flag the day after it does. The plugin never adds a second tax-exempt flag, so tax calculation is nopCommerce's (or the tax plugin's) as before.
+
+Net 30 is a payment method only customers you switch on can see; the order is placed unpaid with a due date and settled with *Mark as paid*. Additional contacts get their own copy of the order emails they subscribe to, which works by replacing nopCommerce's workflow message service with a subclass, so re-test contact emails after a nopCommerce upgrade. Check on staging that your tax plugin (TaxJar) honours *Is tax exempt*; `TESTING.md` part 3 covers it.
+
+Uninstalling keeps its data, tax certificates included, so a reinstall picks it up; Settings has an Export (zip) of everything and a separate "Delete all plugin data".
+
 ## Repository layout
 
 Every plugin follows the same two-folder convention inside each of its `nopCommerce 4.50/` and `nopCommerce 4.90/` directories:
@@ -71,6 +80,8 @@ The `Nop.Plugin.` prefix marks source. The same name without it is the deployabl
 Zips are not tracked. They duplicate the deployable folder byte for byte, and a compressed binary cannot be delta-compressed against its predecessor, so every repackage used to add a full copy to history. They are now built at release time and attached to a release instead.
 
 Estimate Builder is the exception: `estimate-builder/` is a git submodule pointing at [muddro1/estimate-builder](https://github.com/muddro1/estimate-builder), a single project folder that builds against prebuilt nopCommerce assemblies instead of sitting in a nopCommerce source tree. Clone with `git clone --recurse-submodules`, or run `git submodule update --init` in an existing clone. Its `README.md` covers building; `dotnet build -c Release -p:NopRefs=<folder with the Nop*.dll files>` writes the deployable folder to `output/` beside it, which is ignored here.
+
+Every `[NopMigration]` timestamp must be unique across **all** of these plugins. nopCommerce records applied migrations by timestamp alone, in one table shared by every plugin, so a reused timestamp makes nopCommerce skip the second migration as already applied. Customer profile 1.0.0 shipped with Estimate Builder's `2026/10/12 12:00:00` and installed without its tables. Check before adding one: `grep -rn 'NopMigration("' --include='*.cs' .`
 
 `docs/superpowers/` holds the design specs and implementation plans for the handling fee and search work.
 

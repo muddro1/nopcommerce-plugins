@@ -1,0 +1,99 @@
+@model AdminCertificateListModel
+@inject Nop.Services.Helpers.IDateTimeHelper DateTimeHelper
+@{
+    const string P = CustomerProfileDefaults.LocalePrefix;
+}
+
+<p>
+    @if (Model.CurrentValid != null)
+    {
+        <span class="badge badge-success">@T(P + "TaxExemption.State.Approved")</span>
+        @string.Format(T(P + "TaxExemption.Status.Valid").Text, Model.CurrentValid.ExpiresOn!.Value.ToShortDateString())
+    }
+    else if (Model.HasPending)
+    {
+        <span class="badge badge-warning">@T(P + "TaxExemption.State.PendingReview")</span>
+        @T(P + "TaxExemption.Status.Pending")
+    }
+    else
+    {
+        @T(P + "TaxExemption.Status.None")
+    }
+</p>
+
+@if (Model.IsTaxExempt && Model.CurrentValid == null)
+{
+    <div class="alert alert-warning py-2">@T(P + "TaxExemption.Warning.ExemptWithoutCertificate")</div>
+}
+
+@if (Model.Certificates.Any())
+{
+    <table class="table table-sm table-bordered">
+        <thead>
+            <tr>
+                <th>@T(P + "TaxExemption.UploadedOn")</th>
+                <th>@T(P + "TaxExemption.State")</th>
+                <th>@T(P + "TaxExemption.ExpiresOn")</th>
+                <th>@T(P + "TaxExemption.CertificateNumber")</th>
+                <th>@T(P + "TaxExemption.ReviewNote")</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var cert in Model.Certificates)
+            {
+                var badge = cert.State switch
+                {
+                    CertificateState.Approved => "badge-success",
+                    CertificateState.PendingReview => "badge-warning",
+                    CertificateState.Rejected or CertificateState.Expired => "badge-danger",
+                    _ => "badge-secondary"
+                };
+                <tr>
+                    <td>
+                        @((await DateTimeHelper.ConvertToUserTimeAsync(cert.UploadedOnUtc, DateTimeKind.Utc)).ToShortDateString())
+                        <br /><small class="text-muted">
+                            @(cert.UploadedByCustomerId == Model.CustomerId ? T(P + "TaxExemption.UploadedBy.Customer") : T(P + "TaxExemption.UploadedBy.Admin"))
+                        </small>
+                    </td>
+                    <td><span class="badge @badge">@T(P + "TaxExemption.State." + cert.State)</span></td>
+                    <td>@cert.ExpiresOn?.ToShortDateString()</td>
+                    <td>
+                        @cert.CertificateNumber
+                        @if (!string.IsNullOrEmpty(cert.IssuingState))
+                        {
+                            <br /><small class="text-muted">@cert.IssuingState</small>
+                        }
+                    </td>
+                    <td>@cert.ReviewNote</td>
+                    <td style="min-width: 260px">
+                        <a class="btn btn-default btn-xs" target="_blank" rel="noopener"
+                           href="@Url.Action("CertificateFile", "CustomerProfileAdmin", new { area = "Admin", id = cert.Id })">
+                            <i class="far fa-file"></i> @T(P + "TaxExemption.View")
+                        </a>
+                        @if (Model.CanEdit && cert.State == CertificateState.PendingReview)
+                        {
+                            <div class="form-inline mt-1">
+                                <input type="date" class="form-control form-control-sm mr-1 cp-cert-approve-date"
+                                       value="@cert.ExpiresOn?.ToString("yyyy-MM-dd")" min="@Model.Today.ToString("yyyy-MM-dd")" />
+                                <button type="button" class="btn btn-success btn-xs cp-cert-approve" data-id="@cert.Id"
+                                        data-url="@Url.Action("CertificateApprove", "CustomerProfileAdmin", new { area = "Admin" })">
+                                    @T(P + "TaxExemption.Approve")
+                                </button>
+                            </div>
+                            <div class="form-inline mt-1">
+                                <input type="text" class="form-control form-control-sm mr-1 cp-cert-note" maxlength="@CustomerProfileDefaults.NoteMaxLength"
+                                       placeholder="@T(P + "TaxExemption.ReviewNote")" />
+                                <button type="button" class="btn btn-danger btn-xs cp-cert-reject" data-id="@cert.Id"
+                                        data-url="@Url.Action("CertificateReject", "CustomerProfileAdmin", new { area = "Admin" })">
+                                    @T(P + "TaxExemption.Reject")
+                                </button>
+                            </div>
+                            <div class="text-danger small cp-cert-error"></div>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

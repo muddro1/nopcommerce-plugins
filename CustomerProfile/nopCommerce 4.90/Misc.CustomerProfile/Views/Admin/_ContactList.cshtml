@@ -1,0 +1,64 @@
+@model AdminContactListModel
+@{
+    const string P = CustomerProfileDefaults.LocalePrefix;
+}
+@if (!Model.Contacts.Any())
+{
+    <p class="text-muted">@T(P + "Contacts.None")</p>
+}
+else
+{
+    <table class="table table-sm table-bordered">
+        <thead>
+            <tr>
+                <th>@T(P + "Contacts.Name")</th>
+                <th>@T(P + "Contacts.Email")</th>
+                <th>@T(P + "Contacts.Categories")</th>
+                <th>@T(P + "Contacts.Active")</th>
+                @if (Model.CanEdit)
+                {
+                    <th></th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var contact in Model.Contacts)
+            {
+                <tr class="@(contact.Active ? "" : "text-muted")">
+                    <td>
+                        @contact.Name
+                        @if (!string.IsNullOrEmpty(contact.Title))
+                        {
+                            <br /><small class="text-muted">@contact.Title</small>
+                        }
+                    </td>
+                    <td>@contact.Email</td>
+                    <td>
+                        @* One per line so the column keeps its width however many are ticked *@
+                        @foreach (var category in MessageCategories.All.Where(c => contact.Categories.HasFlag(c)))
+                        {
+                            <div>@T(P + "Category." + category)</div>
+                        }
+                    </td>
+                    <td>@(contact.Active ? T("Admin.Common.Yes") : T("Admin.Common.No"))</td>
+                    @if (Model.CanEdit)
+                    {
+                        <td class="text-nowrap">
+                            <button type="button" class="btn btn-default btn-xs cp-contact-edit"
+                                    data-id="@contact.Id" data-name="@contact.Name" data-email="@contact.Email"
+                                    data-title="@contact.Title" data-active="@(contact.Active ? "true" : "false")"
+                                    data-categories="@contact.CategoriesId">
+                                <i class="fas fa-pencil-alt"></i>
+                            </button>
+                            <button type="button" class="btn btn-danger btn-xs cp-contact-delete"
+                                    data-id="@contact.Id" data-customer-id="@Model.CustomerId" data-confirm="@T("Admin.Common.AreYouSure")"
+                                    data-url="@Url.Action("ContactDelete", "CustomerProfileAdmin", new { area = "Admin" })">
+                                <i class="far fa-trash-alt"></i>
+                            </button>
+                        </td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+}

@@ -1,0 +1,29 @@
+@{
+    const string P = CustomerProfileDefaults.LocalePrefix;
+}
+@* RegisterBottom renders after the registration </form>, so the script moves this block inside it to post with it.
+   If a theme's markup differs and the form isn't found, the block stays hidden; customers can set it on Business details. *@
+<div id="customer-profile-register" class="fieldset" style="display:none">
+    <div class="title"><strong>@T(P + "Register.Title")</strong></div>
+    <div class="form-fields">
+        <div class="inputs">
+            <label for="cp-register-dealership">@T(P + "Dealership"):</label>
+            <input id="cp-register-dealership" type="text" name="@CustomerProfileDefaults.FieldDealership"
+                   maxlength="@CustomerProfileDefaults.DealershipMaxLength" />
+        </div>
+    </div>
+</div>
+<script asp-location="Footer">
+    $(function () {
+        var block = $('#customer-profile-register');
+        var form = $('.registration-page form').first();
+        if (!form.length)
+            return;
+        var buttons = form.find('.buttons').first();
+        if (buttons.length)
+            block.insertBefore(buttons);
+        else
+            block.appendTo(form);
+        block.show();
+    });
+</script>

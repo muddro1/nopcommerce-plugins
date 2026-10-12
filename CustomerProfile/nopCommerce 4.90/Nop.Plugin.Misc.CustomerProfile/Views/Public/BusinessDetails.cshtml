@@ -1,0 +1,112 @@
+@model BusinessDetailsModel
+@using Nop.Web.Components
+@{
+    Layout = "_ColumnsTwo";
+    const string P = CustomerProfileDefaults.LocalePrefix;
+    NopHtml.AddTitleParts(T(P + "BusinessDetails").Text);
+    NopHtml.AppendPageCssClassParts("html-account-page");
+    NopHtml.AppendPageCssClassParts("html-customer-profile-page");
+}
+
+@section left
+{
+    @* -1 matches no core tab; our own navigation item highlights itself *@
+    @await Component.InvokeAsync(typeof(CustomerNavigationViewComponent), new { selectedTabId = -1 })
+}
+
+<div class="page account-page customer-profile-page">
+    <div class="page-title">
+        <h1>@T("Account.MyAccount") - @T(P + "BusinessDetails")</h1>
+    </div>
+    <div class="page-body">
+        <div asp-validation-summary="All" class="message-error"></div>
+
+        <form method="post" asp-route="@CustomerProfileDefaults.RouteBusinessDetails">
+            <div class="fieldset">
+                <div class="form-fields">
+                    <div class="inputs">
+                        <label for="bmwDealership">@T(P + "Dealership"):</label>
+                        <input id="bmwDealership" name="bmwDealership" type="text" value="@Model.BmwDealership"
+                               maxlength="@CustomerProfileDefaults.DealershipMaxLength" />
+                    </div>
+                </div>
+            </div>
+            <div class="buttons">
+                <button type="submit" class="button-1 save-customer-info-button">@T("Common.Save")</button>
+            </div>
+        </form>
+
+        <div class="section">
+            <div class="title"><strong>@T(P + "Contacts")</strong></div>
+            <p>@T(P + "Contacts.Hint")</p>
+
+            @if (!Model.Contacts.Any())
+            {
+                <p class="no-data">@T(P + "Contacts.None")</p>
+            }
+            else
+            {
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>@T(P + "Contacts.Name")</th>
+                                <th>@T(P + "Contacts.Email")</th>
+                                <th>@T(P + "Contacts.Categories")</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var contact in Model.Contacts)
+                            {
+                                <tr style="@(contact.Active ? "" : "opacity:.6")">
+                                    <td>
+                                        @contact.Name
+                                        @if (!string.IsNullOrEmpty(contact.Title))
+                                        {
+                                            <br /><small>@contact.Title</small>
+                                        }
+                                        @if (!contact.Active)
+                                        {
+                                            <br /><small>(@T(P + "Contacts.Active"): @T("Common.No"))</small>
+                                        }
+                                    </td>
+                                    <td>@contact.Email</td>
+                                    <td>
+                                        @* One per line so the column keeps its width however many are ticked *@
+                                        @foreach (var category in MessageCategories.All.Where(c => contact.Categories.HasFlag(c)))
+                                        {
+                                            <div>@T(P + "Category." + category)</div>
+                                        }
+                                    </td>
+                                    <td style="white-space:nowrap">
+                                        <a href="@Url.RouteUrl(CustomerProfileDefaults.RouteContactEdit, new { id = contact.Id })">@T("Common.Edit")</a>
+                                        <form method="post" action="@Url.RouteUrl("CustomerProfile.ContactDelete", new { id = contact.Id })" style="display:inline"
+                                              onsubmit="return confirm('@T("Common.AreYouSure")');">
+                                            <button type="submit" class="button-2" style="margin-left:8px">@T(P + "Contacts.Delete")</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+
+            @if (Model.CanAddContact)
+            {
+                <form method="post" action="@Url.RouteUrl("CustomerProfile.ContactAdd")">
+                    <div class="fieldset">
+                        <div class="title"><strong>@T(P + "Contacts.Add")</strong></div>
+                        <div class="form-fields">
+                            <partial name="~/Plugins/Misc.CustomerProfile/Views/Public/_ContactFields.cshtml" model="Model.NewContact" />
+                        </div>
+                    </div>
+                    <div class="buttons">
+                        <button type="submit" class="button-1">@T(P + "Contacts.Add")</button>
+                    </div>
+                </form>
+            }
+        </div>
+    </div>
+</div>

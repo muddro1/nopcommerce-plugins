@@ -1,0 +1,9 @@
+@model (string Key, DateTime Date)
+@{
+    const string P = CustomerProfileDefaults.LocalePrefix;
+}
+@* Rendered inside the account navigation <ul>, so it has to be an <li> *@
+<li class="customer-profile-expiry-notice" style="padding:10px;margin-bottom:8px;background:#fff6e0;border:1px solid #f0c36d;list-style:none">
+    @string.Format(T(P + Model.Key).Text, Model.Date.ToShortDateString())
+    <a href="@Url.RouteUrl(CustomerProfileDefaults.RouteTaxExemption)">@T(P + "TaxExemption.Banner.Link")</a>
+</li>
