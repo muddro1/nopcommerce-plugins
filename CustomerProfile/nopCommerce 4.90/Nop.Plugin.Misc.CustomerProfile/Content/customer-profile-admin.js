@@ -12,7 +12,7 @@
     }
 
     function load($container) {
-        return $.get($container.data('url')).done(function (html) {
+        return $.ajax({ url: $container.data('url'), cache: false }).done(function (html) {
             $container.html(html);
         });
     }
@@ -97,7 +97,12 @@
         var $form = $('#cp-contact-form');
         var $title = $('#cp-contact-form-title');
 
+        // True while the contact form holds an edit or a new contact that hasn't been saved
+        var contactDirty = false;
+        $form.on('input change', 'input', function () { contactDirty = true; });
+
         function resetContactForm() {
+            contactDirty = false;
             $('#cp-contact-id').val('0');
             $('#cp-contact-name, #cp-contact-email, #cp-contact-title').val('');
             $('#cp-contact-active').prop('checked', true);
@@ -117,6 +122,7 @@
                 $(this).prop('checked', (c.categories & parseInt(this.value, 10)) !== 0);
             });
             $title.text($title.data('edit'));
+            contactDirty = true;
             $('html, body').animate({ scrollTop: $form.offset().top - 80 }, 200);
         });
 
@@ -133,7 +139,8 @@
 
         $('#cp-contact-cancel').on('click', resetContactForm);
 
-        $('#cp-contact-save').on('click', function () {
+        function saveContact() {
+            var $error = $('#cp-contact-error');
             var categories = $('.cp-contact-category:checked').map(function () { return this.value; }).get();
             var postData = {
                 customerId: $contacts.data('customer-id'),
@@ -145,13 +152,47 @@
                 Categories: categories
             };
             addAntiForgeryToken(postData);
-            $.ajax({ url: $form.data('url'), type: 'POST', data: postData, traditional: true }).done(function (result) {
-                if (!result.success) {
-                    showErrors($('#cp-contact-error'), result.errors);
-                    return;
-                }
-                resetContactForm();
-                load($contacts);
+            return $.ajax({ url: $form.data('url'), type: 'POST', data: postData, traditional: true })
+                .then(function (result) {
+                    if (!result.success) {
+                        showErrors($error, result.errors);
+                        return $.Deferred().reject().promise();
+                    }
+                    resetContactForm();
+                    load($contacts);
+                    return result;
+                }, function (xhr) {
+                    showErrors($error, [xhr.status + ' ' + xhr.statusText]);
+                });
+        }
+
+        $('#cp-contact-save').on('click', function () {
+            var $btn = $(this).prop('disabled', true);
+            saveContact().always(function () { $btn.prop('disabled', false); });
+        });
+
+        // The contact form has its own Save button, but it's easy to edit a contact and press the page's Save
+        // instead, which would silently drop the edit. Save the contact first, then let the page submit.
+        var $pageForm = $contacts.closest('form');
+        var resubmitting = false;
+        $pageForm.on('submit', function (e) {
+            if (resubmitting || !contactDirty || !$('#cp-contact-form').length)
+                return;
+            // A new contact left blank is not an edit
+            if ($('#cp-contact-id').val() === '0' && !$('#cp-contact-name').val() && !$('#cp-contact-email').val())
+                return;
+
+            e.preventDefault();
+            var submitter = e.originalEvent && e.originalEvent.submitter;
+            saveContact().done(function () {
+                resubmitting = true;
+                // requestSubmit keeps the clicked button's name, so "Save and continue" still continues
+                if (submitter && $pageForm[0].requestSubmit)
+                    $pageForm[0].requestSubmit(submitter);
+                else
+                    $pageForm[0].submit();
+            }).fail(function () {
+                $('html, body').animate({ scrollTop: $form.offset().top - 80 }, 200);
             });
         });
     });

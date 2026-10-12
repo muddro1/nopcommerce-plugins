@@ -1,6 +1,6 @@
 Customer profile
 ================
-For nopCommerce 4.90 (version 1.0.3).
+For nopCommerce 4.90 (version 1.0.4).
 
 Extends the customer record for B2B customers:
 
@@ -37,7 +37,8 @@ Admin
       Dealership, Net 30 switch and terms, tax exemption certificates
       (view, approve, reject, upload), additional contacts.
       Dealership and Net 30 save with the page's Save button. Certificate
-      and contact buttons save immediately.
+      and contact buttons save immediately. A contact left mid-edit is
+      also saved when you press the page's Save.
   FMS Plugins > Customer Profile > Tax exemptions
       Certificates by status: pending review (the work queue), expiring
       soon, expired, rejected.

@@ -39,11 +39,11 @@
                     <label class="col-form-label" for="cp-net30">@T(P + "Net30.Enabled")</label>
                 </div>
                 <div class="col-md-9">
-                    <div class="form-check pt-2">
-                        <input id="cp-net30" class="form-check-input" type="checkbox" name="@CustomerProfileDefaults.FieldNet30Enabled"
-                               value="true" @(Model.Net30Enabled ? "checked" : "") @(Model.CanEdit ? "" : "disabled") />
-                        <input type="hidden" name="@CustomerProfileDefaults.FieldNet30Enabled" value="false" />
-                    </div>
+                    @* Plain checkbox like core's own on this page: Bootstrap's form-check-input is absolutely
+                       positioned and, with no label beside it, sits on top of the hint *@
+                    <input id="cp-net30" type="checkbox" name="@CustomerProfileDefaults.FieldNet30Enabled"
+                           value="true" @(Model.Net30Enabled ? "checked" : "") @(Model.CanEdit ? "" : "disabled") />
+                    <input type="hidden" name="@CustomerProfileDefaults.FieldNet30Enabled" value="false" />
                     <small class="form-text text-muted">@T(P + "Net30.Enabled.Hint")</small>
                 </div>
             </div>

@@ -1,6 +1,6 @@
 # Customer profile plugin — staging test script
 
-**Plugin:** Misc.CustomerProfile 1.0.3, built against nopCommerce 4.90
+**Plugin:** Misc.CustomerProfile 1.0.4, built against nopCommerce 4.90
 **Purpose:** confirm on a real store what the automated tests could only confirm against mocks.
 
 The 49 automated tests cover the decision rules (expiry, overdue, which contacts get a copy,
@@ -120,8 +120,10 @@ Check emails under **System → Message queue** rather than waiting for delivery
    - [ ] Only A gets it.
 7. As **B**, open `/customer/business-details/contact/{id of A's contact}`.
    - [ ] 404.
-8. Admin card: edit AP's categories, delete Accounts.
+8. Admin card: edit AP's categories (pencil, change the ticks, **Save contact**), delete Accounts.
    - [ ] A's Business details reflects both changes.
+9. Admin card: pencil on AP, change its categories, then press the page's **Save and continue** instead of Save contact.
+   - [ ] After the reload AP shows the new categories.
 
 ## Part 7 — Export
 
