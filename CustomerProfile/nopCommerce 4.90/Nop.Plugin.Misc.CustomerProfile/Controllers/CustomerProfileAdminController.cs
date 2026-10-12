@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using Nop.Core;
 using Nop.Plugin.Misc.CustomerProfile.Logic;
 using Nop.Plugin.Misc.CustomerProfile.Models;
+using Nop.Plugin.Misc.CustomerProfile.Services;
+using Nop.Services.Customers;
 using Nop.Services.Configuration;
 using Nop.Services.Localization;
 using Nop.Services.Messages;
@@ -19,22 +21,43 @@ public partial class CustomerProfileAdminController : BasePluginController
 {
     private const string ConfigureView = CustomerProfileDefaults.ViewsPath + "/Admin/Configure.cshtml";
 
+    private readonly ContactEditor _contactEditor;
+    private readonly IBusinessProfileService _profileService;
+    private readonly ICustomerContactService _contactService;
+    private readonly ICustomerService _customerService;
     private readonly ILocalizationService _localizationService;
+    private readonly INet30Service _net30Service;
     private readonly INotificationService _notificationService;
     private readonly IPermissionService _permissionService;
     private readonly ISettingService _settingService;
+    private readonly IStoreClock _clock;
+    private readonly ITaxExemptionService _taxExemptionService;
     private readonly IWorkContext _workContext;
 
-    public CustomerProfileAdminController(ILocalizationService localizationService,
+    public CustomerProfileAdminController(ContactEditor contactEditor,
+        IBusinessProfileService profileService,
+        ICustomerContactService contactService,
+        ICustomerService customerService,
+        ILocalizationService localizationService,
+        INet30Service net30Service,
         INotificationService notificationService,
         IPermissionService permissionService,
         ISettingService settingService,
+        IStoreClock clock,
+        ITaxExemptionService taxExemptionService,
         IWorkContext workContext)
     {
+        _contactEditor = contactEditor;
+        _profileService = profileService;
+        _contactService = contactService;
+        _customerService = customerService;
         _localizationService = localizationService;
+        _net30Service = net30Service;
         _notificationService = notificationService;
         _permissionService = permissionService;
         _settingService = settingService;
+        _clock = clock;
+        _taxExemptionService = taxExemptionService;
         _workContext = workContext;
     }
 
