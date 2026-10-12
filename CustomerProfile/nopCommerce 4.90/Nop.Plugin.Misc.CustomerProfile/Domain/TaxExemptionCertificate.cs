@@ -26,6 +26,9 @@ public class TaxExemptionCertificate : BaseEntity
     public string? ReviewNote { get; set; }
     public DateTime? ReminderSentOnUtc { get; set; }
     public DateTime? ExpiredNoticeSentOnUtc { get; set; }
+
+    /// <summary>Whether expiring this certificate unticked the customer's IsTaxExempt; decides the store email's wording</summary>
+    public bool ExemptionRemovedOnExpiry { get; set; }
     public DateTime? PendingNudgeSentOnUtc { get; set; }
 
     public CertificateState State

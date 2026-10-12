@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Nop.Core.Domain.Orders;
 using Nop.Core.Domain.Payments;
 using Nop.Plugin.Misc.CustomerProfile.Logic;
 using Nop.Plugin.Misc.CustomerProfile.Models;
@@ -33,7 +34,8 @@ public class OrderDueDateViewComponent : NopViewComponent
             return Content(string.Empty);
 
         var order = await _orderService.GetOrderByIdAsync(details.Id);
-        if (order == null || order.PaymentStatus == PaymentStatus.Paid)
+        // Only while still awaiting payment: not paid, refunded, voided or cancelled
+        if (order == null || order.PaymentStatus != PaymentStatus.Pending || order.OrderStatus == OrderStatus.Cancelled)
             return Content(string.Empty);
 
         return View(CustomerProfileDefaults.ViewsPath + "/Public/OrderDueDate.cshtml",

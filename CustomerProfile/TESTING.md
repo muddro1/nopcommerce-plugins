@@ -1,9 +1,9 @@
 # Customer profile plugin — staging test script
 
-**Plugin:** Misc.CustomerProfile 1.0.1, built against nopCommerce 4.90
+**Plugin:** Misc.CustomerProfile 1.0.2, built against nopCommerce 4.90
 **Purpose:** confirm on a real store what the automated tests could only confirm against mocks.
 
-The 41 automated tests cover the decision rules (expiry, overdue, which contacts get a copy,
+The 42 automated tests cover the decision rules (expiry, overdue, which contacts get a copy,
 upload checks) and the contact-copy mechanics against mocked nopCommerce services. Nothing
 has run against a real database, real checkout or TaxJar. This script closes that gap.
 
@@ -31,10 +31,10 @@ Check emails under **System → Message queue** rather than waiting for delivery
 ## Part 2 — Dealership and admin card
 
 1. Admin → Customers → edit **A**. A **Business profile** card is near the bottom.
-2. Enter a dealership, **Save and continue**.
-   - [ ] The value is still there after reload.
-3. Clear A's email (forcing a core validation error), change the dealership, Save.
-   - [ ] The page shows the core error, and after fixing it and reloading, the dealership is the **old** value.
+2. Enter a dealership, tick **Net 30 enabled**, **Save and continue**.
+   - [ ] Both are still there after reload.
+3. Untick every customer role (forcing a core validation error), change the dealership and untick Net 30, Save.
+   - [ ] The page shows the core error. Reload without saving: dealership is the **old** value and Net 30 still ticked.
 4. Log in as a vendor admin, if you have one.
    - [ ] No Business profile card, no FMS Plugins → Customer Profile items.
 5. Log in to the storefront as **A** → My Account.
@@ -65,7 +65,9 @@ Check emails under **System → Message queue** rather than waiting for delivery
    - [ ] Checkout confirm tax $0.00
    - [ ] Placed order tax $0.00 (admin order page and PDF invoice)
    - If any shows tax, **stop**: TaxJar isn't respecting "Is tax exempt" and needs follow-up before go-live.
-7. As **A**, upload a second certificate; admin **Rejects** it with no note.
+7. As **A**, upload a second certificate, then try to upload a third.
+   - [ ] After the second, the upload form is replaced by "waiting for review"; posting a third anyway is refused.
+8. Admin **Rejects** the second certificate with no note.
    - [ ] Refused: a note is required. Add a note, Reject: A gets the email with the note, A's history shows it.
 
 ## Part 4 — Reminders and expiry
@@ -79,7 +81,7 @@ Check emails under **System → Message queue** rather than waiting for delivery
    `UPDATE TaxExemptionCertificate SET ExpiresOn = DATEADD(day, -1, CAST(GETDATE() AS date)) WHERE Id = <id>;`
    Run the task.
    - [ ] Certificate shows *Expired*; A's *Is tax exempt* is unticked; A's admin comment has a line explaining why.
-   - [ ] Expired emails to A and to the store.
+   - [ ] Expired emails to A and to the store. The store's says tax exemption was removed.
    - [ ] A's account pages show the expired notice; checkout charges tax again.
 4. Leave a fresh upload pending, set its `UploadedOnUtc` to 4 days ago, run the task.
    - [ ] One "still waiting for review" email to the store. Running again sends nothing.
@@ -97,7 +99,9 @@ Check emails under **System → Message queue** rather than waiting for delivery
    - [ ] Gone from Net 30 orders; due line gone from the storefront order page.
 4. Start a checkout as B up to the confirm step, untick Net 30 for B in admin, then confirm the order.
    - [ ] Order refused: "Net 30 is not available on this account…"
-5. Turn on *Email overdue Net 30 reminders*. Place another Net 30 order, set its `Net30Order.DueOn` to yesterday, run the task.
+5. Mark a Net 30 order paid, then **Refund (offline)** it.
+   - [ ] It doesn't reappear in Net 30 orders; B's order page shows no "payment due" line.
+6. Turn on *Email overdue Net 30 reminders*. Place another Net 30 order, set its `Net30Order.DueOn` to yesterday, run the task.
    - [ ] One overdue email to B, CC the store. Running again sends nothing. Overdue row is red in the list.
 
 ## Part 6 — Additional contacts

@@ -51,6 +51,9 @@ public class DailyTask : IScheduleTask
                     case ExpiryActionKind.Expire:
                         await _taxExemptionService.ExpireAsync(action.CertificateId, action.RemoveExemption);
                         break;
+                    case ExpiryActionKind.SendExpiredNotice:
+                        await _taxExemptionService.SendExpiredNoticeAsync(action.CertificateId);
+                        break;
                     case ExpiryActionKind.NudgePendingReview:
                         await _taxExemptionService.SendPendingNudgeAsync(action.CertificateId);
                         break;

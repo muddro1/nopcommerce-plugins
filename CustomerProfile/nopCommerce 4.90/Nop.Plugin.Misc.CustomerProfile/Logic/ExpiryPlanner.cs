@@ -9,7 +9,10 @@ public enum ExpiryActionKind
 {
     SendReminder,
     Expire,
-    NudgePendingReview
+    NudgePendingReview,
+
+    /// <summary>Expired earlier, but the expired emails never went out (the send failed)</summary>
+    SendExpiredNotice
 }
 
 /// <param name="RemoveExemption">Only for <see cref="ExpiryActionKind.Expire"/>: untick the customer's IsTaxExempt</param>
@@ -45,6 +48,10 @@ public static class ExpiryPlanner
                         actions.Add(new ExpiryAction(ExpiryActionKind.SendReminder, cert.Id, cert.CustomerId));
                     }
 
+                    break;
+
+                case CertificateState.Expired when cert.ExpiredNoticeSentOnUtc == null:
+                    actions.Add(new ExpiryAction(ExpiryActionKind.SendExpiredNotice, cert.Id, cert.CustomerId));
                     break;
 
                 case CertificateState.PendingReview when pendingNudgeDays > 0 && cert.PendingNudgeSentOnUtc == null

@@ -21,7 +21,7 @@ public interface ITaxExemptionService
     /// <summary>The approved certificate valid today with the latest expiry, if any</summary>
     Task<TaxExemptionCertificate?> GetCurrentValidAsync(int customerId);
 
-    /// <summary>Approved and pending certificates: the only states the daily task acts on</summary>
+    /// <summary>What the daily task acts on: approved, pending, and expired ones whose expired emails haven't gone out</summary>
     Task<IList<TaxExemptionCertificate>> GetForPlanningAsync();
 
     Task<IPagedList<CertificateRow>> SearchAsync(CertificateFilter filter, string? dealership, string? customer,
@@ -42,6 +42,9 @@ public interface ITaxExemptionService
 
     /// <summary>Daily task: marks expired, optionally removes exemption, sends the expired emails</summary>
     Task ExpireAsync(int certificateId, bool removeExemption);
+
+    /// <summary>Daily task: sends the expired emails for a certificate already marked expired, once</summary>
+    Task SendExpiredNoticeAsync(int certificateId);
 
     Task SendReminderAsync(int certificateId);
     Task SendPendingNudgeAsync(int certificateId);
@@ -111,7 +114,8 @@ public class TaxExemptionService : ITaxExemptionService
 
     public async Task<IList<TaxExemptionCertificate>> GetForPlanningAsync() =>
         await _certificateRepository.Table
-            .Where(c => c.StateId == (int)CertificateState.Approved || c.StateId == (int)CertificateState.PendingReview)
+            .Where(c => c.StateId == (int)CertificateState.Approved || c.StateId == (int)CertificateState.PendingReview
+                        || (c.StateId == (int)CertificateState.Expired && c.ExpiredNoticeSentOnUtc == null))
             .ToListAsync();
 
     public async Task<IPagedList<CertificateRow>> SearchAsync(CertificateFilter filter, string? dealership, string? customer,
@@ -183,6 +187,12 @@ public class TaxExemptionService : ITaxExemptionService
             var dateErrors = await ValidateExpiryAsync(expiresOn);
             if (dateErrors.Any())
                 return dateErrors;
+        }
+        else if (await _certificateRepository.Table.AnyAsync(c =>
+                     c.CustomerId == customerId && c.StateId == (int)CertificateState.PendingReview))
+        {
+            // One waiting at a time: each upload stores up to MaxUploadSizeMb and emails the store
+            return new List<string> { await TAsync("TaxExemption.Error.AlreadyPending") };
         }
 
         var bytes = await _downloadService.GetDownloadBitsAsync(file);
@@ -315,11 +325,7 @@ public class TaxExemptionService : ITaxExemptionService
         if (certificate is not { State: CertificateState.Approved })
             return;
 
-        certificate.State = CertificateState.Expired;
-        await _certificateRepository.UpdateAsync(certificate);
-
         var customer = await _customerService.GetCustomerByIdAsync(certificate.CustomerId);
-        var removed = false;
         if (removeExemption && customer is { IsTaxExempt: true })
         {
             customer.IsTaxExempt = false;
@@ -327,11 +333,29 @@ public class TaxExemptionService : ITaxExemptionService
                 certificate.ExpiresOn?.ToShortDateString());
             customer.AdminComment = string.IsNullOrWhiteSpace(customer.AdminComment) ? note : customer.AdminComment + Environment.NewLine + note;
             await _customerService.UpdateCustomerAsync(customer);
-            removed = true;
+            certificate.ExemptionRemovedOnExpiry = true;
         }
 
-        // Send, then stamp: a failure in between re-sends once rather than never
-        await _messageService.SendExpiredAsync(certificate, removed);
+        // Saved before sending: if the send fails, the daily task finds Expired with no notice stamp and sends it next run
+        certificate.State = CertificateState.Expired;
+        await _certificateRepository.UpdateAsync(certificate);
+
+        await SendExpiredNoticeAsync(certificate);
+    }
+
+    public async Task SendExpiredNoticeAsync(int certificateId)
+    {
+        var certificate = await GetByIdAsync(certificateId);
+        if (certificate != null)
+            await SendExpiredNoticeAsync(certificate);
+    }
+
+    private async Task SendExpiredNoticeAsync(TaxExemptionCertificate certificate)
+    {
+        if (certificate is not { State: CertificateState.Expired, ExpiredNoticeSentOnUtc: null })
+            return;
+
+        await _messageService.SendExpiredAsync(certificate, certificate.ExemptionRemovedOnExpiry);
         certificate.ExpiredNoticeSentOnUtc = _clock.UtcNow;
         await _certificateRepository.UpdateAsync(certificate);
     }

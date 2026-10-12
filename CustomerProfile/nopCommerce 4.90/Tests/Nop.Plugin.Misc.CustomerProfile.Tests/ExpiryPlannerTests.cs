@@ -99,10 +99,24 @@ public class ExpiryPlannerTests
 
     [TestCase(CertificateState.Rejected)]
     [TestCase(CertificateState.Superseded)]
-    [TestCase(CertificateState.Expired)]
     public void Closed_states_are_ignored(CertificateState state)
     {
         Plan(new CertificateSnapshot(1, 1, state, Today.AddDays(-5), UtcNow.AddDays(-100), null, null, null)).Should().BeEmpty();
+    }
+
+    [Test]
+    public void Expired_with_notice_sent_is_ignored()
+    {
+        Plan(new CertificateSnapshot(1, 1, CertificateState.Expired, Today.AddDays(-5), UtcNow.AddDays(-100), null, UtcNow.AddDays(-4), null))
+            .Should().BeEmpty();
+    }
+
+    [Test]
+    public void Expired_whose_notice_never_went_out_is_resent()
+    {
+        // ExpireAsync saved the state, then the email failed: the notice must not be lost
+        Plan(new CertificateSnapshot(1, 1, CertificateState.Expired, Today.AddDays(-5), UtcNow.AddDays(-100), null, null, null))
+            .Should().Equal(new ExpiryAction(ExpiryActionKind.SendExpiredNotice, 1, 1));
     }
 
     [Test]

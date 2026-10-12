@@ -14,7 +14,10 @@ public interface INet30Service
     Task InsertAsync(Net30Order net30Order);
     Task UpdateAsync(Net30Order net30Order);
 
-    /// <summary>Net 30 orders not yet paid, cancelled or deleted</summary>
+    /// <summary>
+    /// Net 30 orders still awaiting payment: payment status Pending, not cancelled or deleted.
+    /// Refunded, partially refunded and voided orders are not unpaid.
+    /// </summary>
     Task<IList<Net30Snapshot>> GetUnpaidSnapshotsAsync();
 
     Task<IPagedList<Net30Row>> SearchUnpaidAsync(bool overdueOnly, int pageIndex, int pageSize);
@@ -59,7 +62,7 @@ public class Net30Service : INet30Service
         var rows = await (
             from n in _net30Repository.Table
             join o in _orderRepository.Table on n.OrderId equals o.Id
-            where !o.Deleted && o.PaymentStatusId != (int)PaymentStatus.Paid && o.OrderStatusId != (int)OrderStatus.Cancelled
+            where !o.Deleted && o.PaymentStatusId == (int)PaymentStatus.Pending && o.OrderStatusId != (int)OrderStatus.Cancelled
             select n).ToListAsync();
 
         return rows.Select(n => new Net30Snapshot(n.OrderId, n.CustomerId, n.DueOn,
@@ -76,7 +79,7 @@ public class Net30Service : INet30Service
             join cu in _customerRepository.Table on n.CustomerId equals cu.Id
             join p in _profileRepository.Table on n.CustomerId equals p.CustomerId into profiles
             from p in profiles.DefaultIfEmpty()
-            where !o.Deleted && o.PaymentStatusId != (int)PaymentStatus.Paid && o.OrderStatusId != (int)OrderStatus.Cancelled
+            where !o.Deleted && o.PaymentStatusId == (int)PaymentStatus.Pending && o.OrderStatusId != (int)OrderStatus.Cancelled
             select new { n, o, cu, Dealership = p == null ? null : p.BmwDealership };
 
         if (overdueOnly)
@@ -94,7 +97,7 @@ public class Net30Service : INet30Service
         var net30 = await GetByOrderIdAsync(orderId);
         var order = await _orderRepository.GetByIdAsync(orderId);
         if (net30 is not { OverdueNoticeSentOnUtc: null } || order == null || order.Deleted
-            || order.PaymentStatus == PaymentStatus.Paid || order.OrderStatus == OrderStatus.Cancelled)
+            || order.PaymentStatus != PaymentStatus.Pending || order.OrderStatus == OrderStatus.Cancelled)
             return;
 
         // Send, then stamp: a failure in between re-sends once rather than never

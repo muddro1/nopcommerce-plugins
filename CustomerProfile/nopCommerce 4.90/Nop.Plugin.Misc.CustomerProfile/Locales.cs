@@ -64,6 +64,7 @@ public static class Locales
         [P + "TaxExemption.Error.ExpiryRequired"] = "Enter the certificate's expiration date.",
         [P + "TaxExemption.Error.ExpiryInPast"] = "The expiration date must be today or later.",
         [P + "TaxExemption.Error.NoteRequired"] = "Enter a note telling the customer why the certificate was rejected.",
+        [P + "TaxExemption.Error.AlreadyPending"] = "Your last certificate is still waiting for review. You can upload another once it has been reviewed.",
         [P + "TaxExemption.Error.NotPending"] = "This certificate has already been reviewed.",
         [P + "TaxExemption.Banner.Expiring"] = "Your tax exemption certificate expires on {0}. Upload a new one to keep tax-exempt pricing.",
         [P + "TaxExemption.Banner.Expired"] = "Your tax exemption certificate expired on {0}. Upload a new one to restore tax-exempt pricing.",

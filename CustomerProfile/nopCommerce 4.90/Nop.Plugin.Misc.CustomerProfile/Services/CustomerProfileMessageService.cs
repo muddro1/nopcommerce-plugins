@@ -9,6 +9,7 @@ using Nop.Plugin.Misc.CustomerProfile.Infrastructure;
 using Nop.Plugin.Misc.CustomerProfile.Logic;
 using Nop.Services.Customers;
 using Nop.Services.Localization;
+using Nop.Services.Logging;
 using Nop.Services.Messages;
 using Nop.Services.Stores;
 
@@ -36,6 +37,7 @@ public class CustomerProfileMessageService : ICustomerProfileMessageService
     private readonly IEventPublisher _eventPublisher;
     private readonly ILanguageService _languageService;
     private readonly ILocalizationService _localizationService;
+    private readonly ILogger _logger;
     private readonly IMessageTemplateService _messageTemplateService;
     private readonly IMessageTokenProvider _messageTokenProvider;
     private readonly IQueuedEmailService _queuedEmailService;
@@ -53,6 +55,7 @@ public class CustomerProfileMessageService : ICustomerProfileMessageService
         IEventPublisher eventPublisher,
         ILanguageService languageService,
         ILocalizationService localizationService,
+        ILogger logger,
         IMessageTemplateService messageTemplateService,
         IMessageTokenProvider messageTokenProvider,
         IQueuedEmailService queuedEmailService,
@@ -70,6 +73,7 @@ public class CustomerProfileMessageService : ICustomerProfileMessageService
         _eventPublisher = eventPublisher;
         _languageService = languageService;
         _localizationService = localizationService;
+        _logger = logger;
         _messageTemplateService = messageTemplateService;
         _messageTokenProvider = messageTokenProvider;
         _queuedEmailService = queuedEmailService;
@@ -90,15 +94,33 @@ public class CustomerProfileMessageService : ICustomerProfileMessageService
     public async Task SendExpiringAsync(TaxExemptionCertificate certificate)
     {
         await SendForCertificateAsync(certificate, CustomerProfileDefaults.TplExpiringCustomer, toCustomer: true);
-        await SendForCertificateAsync(certificate, CustomerProfileDefaults.TplExpiringOwner, toCustomer: false);
+        await SendStoreCopyAsync(certificate, () =>
+            SendForCertificateAsync(certificate, CustomerProfileDefaults.TplExpiringOwner, toCustomer: false));
     }
 
     public async Task SendExpiredAsync(TaxExemptionCertificate certificate, bool exemptionRemoved)
     {
         await SendForCertificateAsync(certificate, CustomerProfileDefaults.TplExpiredCustomer, toCustomer: true);
-        await SendForCertificateAsync(certificate, CustomerProfileDefaults.TplExpiredOwner, toCustomer: false,
-            await _localizationService.GetResourceAsync(CustomerProfileDefaults.LocalePrefix
-                + (exemptionRemoved ? "TaxExemption.Owner.ExemptionRemoved" : "TaxExemption.Owner.ExemptionKept")));
+        var removedText = await _localizationService.GetResourceAsync(CustomerProfileDefaults.LocalePrefix
+            + (exemptionRemoved ? "TaxExemption.Owner.ExemptionRemoved" : "TaxExemption.Owner.ExemptionKept"));
+        await SendStoreCopyAsync(certificate, () =>
+            SendForCertificateAsync(certificate, CustomerProfileDefaults.TplExpiredOwner, toCustomer: false, removedText));
+    }
+
+    /// <summary>
+    /// The store's copy of a customer email. A failure is logged, not thrown: the caller stamps the customer email
+    /// as sent, so the customer isn't emailed again every run while the store copy keeps failing.
+    /// </summary>
+    private async Task SendStoreCopyAsync(TaxExemptionCertificate certificate, Func<Task> send)
+    {
+        try
+        {
+            await send();
+        }
+        catch (Exception ex)
+        {
+            await _logger.ErrorAsync($"Customer profile: store copy of a tax exemption email failed for certificate {certificate.Id}", ex);
+        }
     }
 
     public Task SendPendingNudgeAsync(TaxExemptionCertificate certificate) =>

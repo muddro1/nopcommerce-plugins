@@ -6,6 +6,17 @@ namespace Nop.Plugin.Misc.CustomerProfile.Data.Migrations;
 /// <summary>Creates whichever of the plugin's tables don't exist yet</summary>
 public abstract class CustomerProfileSchemaBase : Migration
 {
+    /// <summary>Columns added after 1.0.0, for tables that already existed</summary>
+    protected void AddMissingColumns()
+    {
+        if (Schema.Table(CustomerProfileDefaults.CertificateTable).Exists()
+            && !Schema.Table(CustomerProfileDefaults.CertificateTable).Column("ExemptionRemovedOnExpiry").Exists())
+        {
+            Alter.Table(CustomerProfileDefaults.CertificateTable)
+                .AddColumn("ExemptionRemovedOnExpiry").AsBoolean().NotNullable().WithDefaultValue(false);
+        }
+    }
+
     protected void CreateMissingTables()
     {
         if (!Schema.Table(CustomerProfileDefaults.ProfileTable).Exists())
@@ -54,7 +65,8 @@ public abstract class CustomerProfileSchemaBase : Migration
                 .WithColumn("ReviewNote").AsString(CustomerProfileDefaults.NoteMaxLength).Nullable()
                 .WithColumn("ReminderSentOnUtc").AsDateTime2().Nullable()
                 .WithColumn("ExpiredNoticeSentOnUtc").AsDateTime2().Nullable()
-                .WithColumn("PendingNudgeSentOnUtc").AsDateTime2().Nullable();
+                .WithColumn("PendingNudgeSentOnUtc").AsDateTime2().Nullable()
+                .WithColumn("ExemptionRemovedOnExpiry").AsBoolean().NotNullable().WithDefaultValue(false);
         }
 
         if (!Schema.Table(CustomerProfileDefaults.Net30OrderTable).Exists())

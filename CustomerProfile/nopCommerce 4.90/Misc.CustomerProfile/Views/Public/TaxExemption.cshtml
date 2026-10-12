@@ -41,6 +41,8 @@
 
         <div asp-validation-summary="All" class="message-error"></div>
 
+        @if (!Model.HasPending)
+        {
         <form method="post" action="@Url.RouteUrl("CustomerProfile.TaxExemptionUpload")" enctype="multipart/form-data">
             <div class="fieldset">
                 <div class="title"><strong>@T(P + "TaxExemption.Upload")</strong></div>
@@ -70,6 +72,7 @@
                 <button type="submit" class="button-1">@T(P + "TaxExemption.Upload")</button>
             </div>
         </form>
+        }
 
         @if (Model.Certificates.Any())
         {

@@ -1,6 +1,6 @@
 Customer profile
 ================
-For nopCommerce 4.90 (version 1.0.1).
+For nopCommerce 4.90 (version 1.0.2).
 
 Extends the customer record for B2B customers:
 
@@ -58,7 +58,8 @@ honours. The checkbox stays admin-only.
 
   1. The customer uploads a certificate (PDF, JPG or PNG) on My Account >
      Tax exemption, optionally entering its expiration date. Nothing about
-     their tax status changes yet. You get an email.
+     their tax status changes yet. You get an email. While it waits for
+     review they can't upload another.
   2. On the customer's Business profile card you open the file, set or
      correct the expiration date, and Approve, or Reject with a note the
      customer sees. Approving replaces any previous approved certificate
@@ -73,7 +74,7 @@ honours. The checkbox stays admin-only.
      With "Remove tax exemption on expiry" on (default), "Is tax exempt"
      is unticked, unless another valid certificate is on file, and a line
      is added to the customer's admin comment saying why. Everyone is
-     emailed again.
+     emailed again. If that email fails, the next run of the task sends it.
 
 A certificate is valid through the whole of its expiration date, in the
 store's time zone (Configuration > Settings > General settings).
@@ -107,6 +108,9 @@ days (default from settings, 30).
   - Optional overdue reminder (setting, off by default): one email to the
     customer and their "Invoices and payments" contacts when an order passes
     its due date unpaid, copied to you.
+  - "Unpaid" means payment status Pending. Paid, refunded, partially
+    refunded, voided and cancelled orders drop off the Net 30 list and never
+    get an overdue reminder.
 
 To show the due date in nopCommerce's own order emails, add
 %Order.Net30DueDate% (and %Order.Net30Terms% for the number of days) to the
@@ -143,17 +147,24 @@ core's constructor. Another plugin that also replaces that service would
 conflict with this one.
 
 
-Upgrading from 1.0.0
---------------------
+Upgrading
+---------
+Upload the new version over the installed one (Local plugins > Upload plugin
+or theme) and restart. Don't uninstall first: that deletes every certificate.
+
+1.0.2 adds one column to TaxExemptionCertificate, created on upgrade.
+
+From 1.0.0:
 1.0.0 created no tables on stores that also run Estimate Builder: its
 install step had the same migration timestamp as one of Estimate Builder's,
 and nopCommerce skipped it as already done. The admin lists then failed with
 "Invalid object name 'Net30Order'" or "'TaxExemptionCertificate'".
 
-Upload 1.0.1 over the installed 1.0.0 (Local plugins > Upload plugin or
-theme) and restart. Don't uninstall first. On restart nopCommerce sees the
-new version and runs 1.0.1's upgrade step, which creates any missing tables.
-Settings, templates and the schedule task from 1.0.0 are kept.
+Upgrading to 1.0.1 or later creates any missing tables. Settings,
+templates and the schedule task from 1.0.0 are kept. Don't install 1.0.0
+anywhere else: on a store whose Estimate Builder is older than 1.2.0, 1.0.0
+records a migration that makes Estimate Builder's later upgrade skip adding
+its Note column.
 
 
 Uninstalling
