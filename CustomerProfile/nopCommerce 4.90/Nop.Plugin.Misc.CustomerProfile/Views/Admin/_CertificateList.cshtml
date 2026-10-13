@@ -9,6 +9,10 @@
     {
         <span class="badge badge-success">@T(P + "TaxExemption.State.Approved")</span>
         @string.Format(T(P + "TaxExemption.Status.Valid").Text, Model.CurrentValid.ExpiresOn!.Value.ToShortDateString())
+        @if (Model.CurrentValid.ExemptionReason != ExemptionReason.NotSet)
+        {
+            <text>(@T(P + "TaxExemption.Reason." + Model.CurrentValid.ExemptionReason))</text>
+        }
     }
     else if (Model.HasPending)
     {
@@ -34,6 +38,7 @@
                 <th>@T(P + "TaxExemption.UploadedOn")</th>
                 <th>@T(P + "TaxExemption.State")</th>
                 <th>@T(P + "TaxExemption.ExpiresOn")</th>
+                <th>@T(P + "TaxExemption.Reason")</th>
                 <th>@T(P + "TaxExemption.CertificateNumber")</th>
                 <th>@T(P + "TaxExemption.ReviewNote")</th>
                 <th></th>
@@ -58,6 +63,7 @@
                     </td>
                     <td><span class="badge @badge">@T(P + "TaxExemption.State." + cert.State)</span></td>
                     <td>@cert.ExpiresOn?.ToShortDateString()</td>
+                    <td>@T(P + "TaxExemption.Reason." + cert.ExemptionReason)</td>
                     <td>
                         @cert.CertificateNumber
                         @if (!string.IsNullOrEmpty(cert.IssuingState))
@@ -73,6 +79,16 @@
                         </a>
                         @if (Model.CanEdit && cert.State == CertificateState.PendingReview)
                         {
+                            <div class="form-inline mt-1">
+                                @* Prefilled with the customer's choice; the reviewer confirms or corrects it *@
+                                <select class="form-control form-control-sm mb-1 cp-cert-approve-reason">
+                                    <option value="0">@T(P + "TaxExemption.Reason.Select")</option>
+                                    @foreach (var reason in ExemptionReasons.All)
+                                    {
+                                        <option value="@((int)reason)" selected="@(reason == cert.ExemptionReason)">@T(P + "TaxExemption.Reason." + reason)</option>
+                                    }
+                                </select>
+                            </div>
                             <div class="form-inline mt-1">
                                 <input type="date" class="form-control form-control-sm mr-1 cp-cert-approve-date"
                                        value="@cert.ExpiresOn?.ToString("yyyy-MM-dd")" min="@Model.Today.ToString("yyyy-MM-dd")" />

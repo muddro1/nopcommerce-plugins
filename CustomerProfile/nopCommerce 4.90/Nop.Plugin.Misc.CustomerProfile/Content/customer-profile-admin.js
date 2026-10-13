@@ -43,6 +43,7 @@
             data.append('customerId', $certificates.data('customer-id'));
             if (file)
                 data.append('file', file);
+            data.append('exemptionReasonId', $('#cp-cert-reason').val());
             data.append('expiresOn', $('#cp-cert-expires').val());
             data.append('certificateNumber', $('#cp-cert-number').val());
             data.append('issuingState', $('#cp-cert-state').val());
@@ -57,6 +58,7 @@
                     }
                     showErrors($error, []);
                     $('#cp-cert-file, #cp-cert-expires, #cp-cert-number, #cp-cert-state').val('');
+                    $('#cp-cert-reason').val('0');
                     syncTaxExempt(result.isTaxExempt);
                     load($certificates);
                 })
@@ -66,7 +68,12 @@
         $certificates.on('click', '.cp-cert-approve', function () {
             var $row = $(this).closest('tr');
             var $error = $row.find('.cp-cert-error');
-            var postData = { id: $(this).data('id'), expiresOn: $row.find('.cp-cert-approve-date').val(), note: $row.find('.cp-cert-note').val() };
+            var postData = {
+                id: $(this).data('id'),
+                exemptionReasonId: $row.find('.cp-cert-approve-reason').val(),
+                expiresOn: $row.find('.cp-cert-approve-date').val(),
+                note: $row.find('.cp-cert-note').val()
+            };
             addAntiForgeryToken(postData);
             $.post($(this).data('url'), postData).done(function (result) {
                 if (!result.success) {

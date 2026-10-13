@@ -16,6 +16,10 @@ public class TaxExemptionPageModel
     public TaxExemptionCertificate? LatestExpired { get; set; }
     public bool HasPending { get; set; }
     public IList<TaxExemptionCertificate> Certificates { get; set; } = new List<TaxExemptionCertificate>();
+
+    /// <summary>Preselected in the upload form: what was just posted, else the latest certificate's, for renewals</summary>
+    public ExemptionReason ExemptionReason { get; set; }
+
     public int MaxUploadSizeMb { get; set; }
     public DateTime Today { get; set; }
 }

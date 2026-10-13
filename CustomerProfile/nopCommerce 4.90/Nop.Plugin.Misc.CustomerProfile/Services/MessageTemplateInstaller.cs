@@ -3,7 +3,7 @@ using Nop.Services.Messages;
 
 namespace Nop.Plugin.Misc.CustomerProfile.Services;
 
-/// <summary>Creates the plugin's message templates on install and removes them on uninstall</summary>
+/// <summary>Creates the plugin's message templates on install, refreshes unedited ones on update, and removes them on uninstall</summary>
 public class MessageTemplateInstaller
 {
     private readonly EmailAccountSettings _emailAccountSettings;
@@ -22,6 +22,7 @@ public class MessageTemplateInstaller
         (CustomerProfileDefaults.TplSubmittedOwner,
             "%Store.Name%: tax exemption certificate to review for %Customer.Email%",
             "<p>%Customer.FullName% (%Customer.Email%, dealership: %Customer.BmwDealership%) uploaded a tax exemption certificate.</p>"
+            + "<p>Tax exempt category: %TaxExemption.Reason%</p>"
             + "<p>Expiration date entered by the customer: %TaxExemption.ExpiresOn%</p>"
             + "<p><a href=\"%TaxExemption.AdminCustomerUrl%\">Review it on the customer page</a></p>"),
 
@@ -70,6 +71,33 @@ public class MessageTemplateInstaller
             + "<p>Payment for order <strong>%Order.OrderNumber%</strong> (%Order.OrderTotal%) was due on %Order.Net30DueDate%. "
             + "If you have already paid, thank you, and please disregard this email.</p>" + Sign)
     };
+
+    /// <summary>Bodies earlier versions installed, which <see cref="UpdateAsync"/> replaces when the store hasn't edited them</summary>
+    private static readonly (string Name, string Body)[] _previousBodies =
+    {
+        // 1.0.0 to 1.0.7: before %TaxExemption.Reason%
+        (CustomerProfileDefaults.TplSubmittedOwner,
+            "<p>%Customer.FullName% (%Customer.Email%, dealership: %Customer.BmwDealership%) uploaded a tax exemption certificate.</p>"
+            + "<p>Expiration date entered by the customer: %TaxExemption.ExpiresOn%</p>"
+            + "<p><a href=\"%TaxExemption.AdminCustomerUrl%\">Review it on the customer page</a></p>")
+    };
+
+    /// <summary>Brings templates still holding an earlier version's default body up to date; edited ones are left alone</summary>
+    public async Task UpdateAsync()
+    {
+        foreach (var (name, previousBody) in _previousBodies)
+        {
+            var current = _templates.First(t => t.Name == name).Body;
+            foreach (var template in await _messageTemplateService.GetMessageTemplatesByNameAsync(name))
+            {
+                if (template.Body != previousBody)
+                    continue;
+
+                template.Body = current;
+                await _messageTemplateService.UpdateMessageTemplateAsync(template);
+            }
+        }
+    }
 
     public async Task InstallAsync()
     {

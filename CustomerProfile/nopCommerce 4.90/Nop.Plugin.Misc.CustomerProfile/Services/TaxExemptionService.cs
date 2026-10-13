@@ -29,14 +29,18 @@ public interface ITaxExemptionService
 
     /// <summary>
     /// Stores an uploaded certificate. Customer uploads wait for review; admin uploads are approved at once
-    /// and need an expiry date.
+    /// and need an expiry date. Both need an <see cref="ExemptionReason"/>.
     /// </summary>
     /// <returns>Errors to show; empty on success</returns>
-    Task<IList<string>> UploadAsync(int customerId, IFormFile? file, DateTime? expiresOn, string? certificateNumber,
-        string? issuingState, int uploadedByCustomerId, bool approveImmediately);
+    Task<IList<string>> UploadAsync(int customerId, IFormFile? file, int exemptionReasonId, DateTime? expiresOn,
+        string? certificateNumber, string? issuingState, int uploadedByCustomerId, bool approveImmediately);
 
-    /// <summary>Approves a pending certificate, supersedes the customer's previous one, and marks them tax exempt if set to</summary>
-    Task<IList<string>> ApproveAsync(int certificateId, DateTime? expiresOn, int reviewerCustomerId, string? note);
+    /// <summary>
+    /// Approves a pending certificate with the reason the reviewer confirmed, supersedes the customer's previous one,
+    /// and marks them tax exempt if set to
+    /// </summary>
+    Task<IList<string>> ApproveAsync(int certificateId, DateTime? expiresOn, int exemptionReasonId, int reviewerCustomerId,
+        string? note);
 
     Task<IList<string>> RejectAsync(int certificateId, int reviewerCustomerId, string? note);
 
@@ -173,11 +177,14 @@ public class TaxExemptionService : ITaxExemptionService
 
     #region Changes
 
-    public async Task<IList<string>> UploadAsync(int customerId, IFormFile? file, DateTime? expiresOn, string? certificateNumber,
-        string? issuingState, int uploadedByCustomerId, bool approveImmediately)
+    public async Task<IList<string>> UploadAsync(int customerId, IFormFile? file, int exemptionReasonId, DateTime? expiresOn,
+        string? certificateNumber, string? issuingState, int uploadedByCustomerId, bool approveImmediately)
     {
         if (file == null || file.Length == 0)
             return new List<string> { await TAsync("TaxExemption.Error.Empty") };
+
+        if (!ExemptionReasons.IsChoice(exemptionReasonId))
+            return new List<string> { await TAsync("TaxExemption.Error.ReasonRequired") };
 
         if (file.Length > _settings.MaxUploadSizeMb * 1024L * 1024L)
             return new List<string> { string.Format(await TAsync("TaxExemption.Error.TooLarge"), _settings.MaxUploadSizeMb) };
@@ -228,6 +235,7 @@ public class TaxExemptionService : ITaxExemptionService
             FileName = Clean(fileName, 400) ?? "certificate",
             ContentType = contentType!,
             State = CertificateState.PendingReview,
+            ExemptionReasonId = exemptionReasonId,
             ExpiresOn = expiresOn?.Date,
             CertificateNumber = Clean(certificateNumber, 100),
             IssuingState = Clean(issuingState, 100),
@@ -237,7 +245,7 @@ public class TaxExemptionService : ITaxExemptionService
         await _certificateRepository.InsertAsync(certificate);
 
         if (approveImmediately)
-            return await ApproveAsync(certificate.Id, expiresOn, uploadedByCustomerId, null);
+            return await ApproveAsync(certificate.Id, expiresOn, exemptionReasonId, uploadedByCustomerId, null);
 
         await _messageService.SendCertificateSubmittedAsync(certificate);
         return new List<string>();
@@ -252,13 +260,18 @@ public class TaxExemptionService : ITaxExemptionService
         return new List<string>();
     }
 
-    public async Task<IList<string>> ApproveAsync(int certificateId, DateTime? expiresOn, int reviewerCustomerId, string? note)
+    public async Task<IList<string>> ApproveAsync(int certificateId, DateTime? expiresOn, int exemptionReasonId,
+        int reviewerCustomerId, string? note)
     {
         var certificate = await GetByIdAsync(certificateId);
         if (certificate == null)
             return new List<string> { await TAsync("NotFound") };
         if (certificate.State != CertificateState.PendingReview)
             return new List<string> { await TAsync("TaxExemption.Error.NotPending") };
+
+        // Certificates uploaded before 1.0.8 have no reason, so the reviewer always confirms one
+        if (!ExemptionReasons.IsChoice(exemptionReasonId))
+            return new List<string> { await TAsync("TaxExemption.Error.ReasonRequired") };
 
         var errors = await ValidateExpiryAsync(expiresOn);
         if (errors.Any())
@@ -275,6 +288,7 @@ public class TaxExemptionService : ITaxExemptionService
         }
 
         certificate.State = CertificateState.Approved;
+        certificate.ExemptionReasonId = exemptionReasonId;
         certificate.ExpiresOn = expiresOn!.Value.Date;
         certificate.ReviewedByCustomerId = reviewerCustomerId;
         certificate.ReviewedOnUtc = _clock.UtcNow;

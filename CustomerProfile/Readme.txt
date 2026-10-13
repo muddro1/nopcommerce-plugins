@@ -1,6 +1,6 @@
 Customer profile
 ================
-For nopCommerce 4.90 (version 1.0.7).
+For nopCommerce 4.90 (version 1.0.8).
 
 Extends the customer record for B2B customers:
 
@@ -58,17 +58,19 @@ The plugin does not add its own tax-exempt flag. It uses nopCommerce's
 honours. The checkbox stays admin-only.
 
   1. The customer uploads a certificate (PDF, JPG or PNG) on My Account >
-     Tax exemption, optionally entering its expiration date. Nothing about
+     Tax exemption, choosing its tax exempt category (Wholesale or resale,
+     Government entity, or Other) and optionally entering its expiration
+     date. Nothing about
      their tax status changes yet. You get an email. While it waits for
      review they can't upload another.
-  2. On the customer's Business profile card you open the file, set or
-     correct the expiration date, and Approve, or Reject with a note the
+  2. On the customer's Business profile card you open the file, confirm
+     or correct the category and the expiration date, and Approve, or Reject with a note the
      customer sees. Approving replaces any previous approved certificate
      and, with "Approving marks the customer tax exempt" on (default),
      ticks "Is tax exempt". The customer and their Tax exemption contacts
      are emailed either way.
      You can also upload a certificate yourself from the card; it is
-     approved straight away and needs an expiration date.
+     approved straight away and needs a category and an expiration date.
   3. Reminder days before expiry (default 30): the customer, their
      contacts and you are emailed once. Their account pages show a notice.
   4. The day after the expiration date the certificate is marked Expired.
@@ -79,6 +81,12 @@ honours. The checkbox stays admin-only.
 
 A certificate is valid through the whole of its expiration date, in the
 store's time zone (Configuration > Settings > General settings).
+
+The category shows on the card, the Tax exemptions list, the customer's
+certificate history and in the export, and %TaxExemption.Reason% is
+available in the plugin's tax exemption emails. It is a record for you; it
+does not change how tax is calculated. Certificates uploaded before 1.0.8
+show "Not given" until approved, and approving one asks for a category.
 
 Certificates are kept as history. They are never overwritten; a replaced
 one shows as "Replaced". Files are stored in the database (the Download
@@ -155,6 +163,11 @@ or theme) and restart.
 
 1.0.2 adds one column to TaxExemptionCertificate, created on upgrade.
 
+1.0.8 adds the tax exempt category column to TaxExemptionCertificate,
+created on upgrade. The "certificate to review" email template gains a
+"Tax exempt category" line if you haven't edited it; if you have, add
+%TaxExemption.Reason% yourself.
+
 From 1.0.0:
 1.0.0 created no tables on stores that also run Estimate Builder: its
 install step had the same migration timestamp as one of Estimate Builder's,
@@ -179,7 +192,8 @@ Export: FMS Plugins > Customer Profile > Settings > "Export (zip)", or the
 The zip holds:
 
   certificates.csv        One row per certificate: customer, dealership,
-                          status, dates, number, review note, file path
+                          status, exempt category, dates, number,
+                          review note, file path
   certificates/<customer id>/<certificate id>-<file name>
                           The certificate files themselves
   business-profiles.csv   Dealership and Net 30 per customer (always all)

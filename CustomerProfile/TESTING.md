@@ -1,6 +1,6 @@
 # Customer profile plugin — staging test script
 
-**Plugin:** Misc.CustomerProfile 1.0.7, built against nopCommerce 4.90
+**Plugin:** Misc.CustomerProfile 1.0.8, built against nopCommerce 4.90
 **Purpose:** confirm on a real store what the automated tests could only confirm against mocks.
 
 The 49 automated tests cover the decision rules (expiry, overdue, which contacts get a copy,
@@ -28,6 +28,12 @@ Check emails under **System → Message queue** rather than waiting for delivery
    - [ ] **FMS Plugins → Customer Profile → Net 30 orders** and **Tax exemptions** open without an error.
 3. **Settings**: put your own address in *CC on store notifications*. Save. Reopen: it stuck.
 
+**Upgrading a store that already runs 1.0.7 or earlier** (instead of step 1): upload the new zip over it and restart.
+   - [ ] `TaxExemptionCertificate` has an `ExemptionReasonId` column; existing certificates show *Not given*.
+   - [ ] The "certificate to review" template (`CustomerProfile.TaxExemption.Submitted.StoreOwnerNotification`) has a
+     "Tax exempt category: %TaxExemption.Reason%" line, unless it had been edited.
+   - [ ] An existing pending certificate can't be approved until a category is chosen.
+
 ## Part 2 — Dealership and admin card
 
 1. Admin → Customers → edit **A**. A **Business profile** card is near the bottom.
@@ -48,15 +54,19 @@ Check emails under **System → Message queue** rather than waiting for delivery
 
 1. As **A**, My Account → Tax exemption, upload the renamed `.txt` file.
    - [ ] Refused: "Please upload a PDF, JPG or PNG file."
-2. Upload the test PDF with an expiration date ~10 days out.
-   - [ ] "Thank you…" message; history shows *Pending review*.
-   - [ ] Message queue: "certificate to review" email to the store account, with your CC address.
+2. Upload the test PDF with no tax exempt category chosen.
+   - [ ] Refused: "Choose a tax exempt category." The page keeps the form.
+   Choose **Wholesale or resale exempt**, set an expiration date ~10 days out, and upload.
+   - [ ] "Thank you…" message; history shows *Pending review* and *Wholesale or resale exempt*.
+   - [ ] Message queue: "certificate to review" email to the store account, with your CC address and a "Tax exempt category: Wholesale or resale exempt" line.
 3. Admin → customer A → card: the certificate is listed *Pending review*. Click **View**.
    - [ ] The PDF opens.
 4. Copy the View link. Log in to the storefront as **B** and open A's storefront file link
    (`/customer/tax-exemption/file/{id}`).
    - [ ] 404. Logged out: redirected to login.
-5. Admin: **Approve** with the date prefilled.
+5. Admin: the pending row's category drop-down shows *Wholesale or resale exempt*. Change it to
+   **Government entity exempt** and **Approve** with the date prefilled.
+   - [ ] The certificate row and the status line show *Government entity exempt*, as does A's history.
    - [ ] The core *Is tax exempt* checkbox on the page ticks itself.
    - [ ] Click the page's **Save**. Reload: *Is tax exempt* is still ticked.
    - [ ] Reviewed email to A.

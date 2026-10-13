@@ -180,11 +180,14 @@ public partial class CustomerProfilePublicController : BasePluginController
 
     #region Tax exemption
 
-    private async Task<TaxExemptionPageModel> PrepareTaxExemptionAsync(Customer customer)
+    private async Task<TaxExemptionPageModel> PrepareTaxExemptionAsync(Customer customer, int postedReasonId = 0)
     {
         var certificates = await _taxExemptionService.GetForCustomerAsync(customer.Id);
         return new TaxExemptionPageModel
         {
+            ExemptionReason = ExemptionReasons.IsChoice(postedReasonId)
+                ? (ExemptionReason)postedReasonId
+                : certificates.FirstOrDefault(c => c.ExemptionReason != ExemptionReason.NotSet)?.ExemptionReason ?? ExemptionReason.NotSet,
             CurrentValid = await _taxExemptionService.GetCurrentValidAsync(customer.Id),
             LatestExpired = certificates.Where(c => c.State == CertificateState.Expired).MaxBy(c => c.ExpiresOn),
             HasPending = certificates.Any(c => c.State == CertificateState.PendingReview),
@@ -207,19 +210,20 @@ public partial class CustomerProfilePublicController : BasePluginController
     [HttpPost]
     [RequestFormLimits(MultipartBodyLengthLimit = 26 * 1024 * 1024)]
     [RequestSizeLimit(26 * 1024 * 1024)]
-    public async Task<IActionResult> TaxExemptionUpload(IFormFile? file, DateTime? expiresOn, string? certificateNumber, string? issuingState)
+    public async Task<IActionResult> TaxExemptionUpload(IFormFile? file, int exemptionReasonId, DateTime? expiresOn, string? certificateNumber,
+        string? issuingState)
     {
         var customer = await GetRegisteredCustomerAsync();
         if (customer == null)
             return Challenge();
 
-        var errors = await _taxExemptionService.UploadAsync(customer.Id, file, expiresOn, certificateNumber, issuingState,
+        var errors = await _taxExemptionService.UploadAsync(customer.Id, file, exemptionReasonId, expiresOn, certificateNumber, issuingState,
             customer.Id, approveImmediately: false);
         if (errors.Any())
         {
             foreach (var error in errors)
                 ModelState.AddModelError(string.Empty, error);
-            return View(TaxExemptionView, await PrepareTaxExemptionAsync(customer));
+            return View(TaxExemptionView, await PrepareTaxExemptionAsync(customer, exemptionReasonId));
         }
 
         _notificationService.SuccessNotification(await TAsync("TaxExemption.Uploaded"));

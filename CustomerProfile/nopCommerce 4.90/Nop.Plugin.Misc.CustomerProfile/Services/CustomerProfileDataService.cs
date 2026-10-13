@@ -104,7 +104,7 @@ public class CustomerProfileDataService : ICustomerProfileDataService
                 }
 
                 lines.Add(Csv.Line(cert.Id, cert.CustomerId, row.CustomerEmail, row.CustomerName, row.Company, row.Dealership,
-                    row.IsTaxExempt, cert.State, cert.ExpiresOn, cert.CertificateNumber, cert.IssuingState,
+                    row.IsTaxExempt, cert.State, cert.ExemptionReason, cert.ExpiresOn, cert.CertificateNumber, cert.IssuingState,
                     _clock.ToStoreDate(cert.UploadedOnUtc), cert.UploadedByCustomerId == cert.CustomerId ? "Customer" : "Admin",
                     cert.ReviewedOnUtc.HasValue ? _clock.ToStoreDate(cert.ReviewedOnUtc.Value) : null, cert.ReviewNote,
                     cert.ExemptionRemovedOnExpiry, path));
@@ -115,7 +115,7 @@ public class CustomerProfileDataService : ICustomerProfileDataService
         }
 
         await WriteCsvAsync(zip, "certificates.csv",
-            "CertificateId,CustomerId,CustomerEmail,CustomerName,Company,BmwDealership,CustomerIsTaxExempt,Status,ExpiresOn,"
+            "CertificateId,CustomerId,CustomerEmail,CustomerName,Company,BmwDealership,CustomerIsTaxExempt,Status,ExemptCategory,ExpiresOn,"
             + "CertificateNumber,IssuingState,UploadedOn,UploadedBy,ReviewedOn,ReviewNote,ExemptionRemovedOnExpiry,File", lines);
     }
 
