@@ -1,0 +1,59 @@
+using Nop.Core.Configuration;
+
+namespace Nop.Plugin.Misc.XpsShip;
+
+public class XpsShipSettings : ISettings
+{
+    /// <summary>Webhooks answer 503 while this is off</summary>
+    public bool Enabled { get; set; }
+
+    /// <summary>Sent by XPS in the x-rsis-key header. Generated on install.</summary>
+    public string SecretKey { get; set; } = string.Empty;
+
+    /// <summary>Comma-separated payment method system names whose orders ship before they're paid (agency POs)</summary>
+    public string ShipBeforePaymentMethods { get; set; } = "Open Payment";
+
+    public bool HideFullyBackorderedOrders { get; set; } = true;
+
+    /// <summary>Orders with a line whose SKU ends in this are held until released on the admin page</summary>
+    public string ExchangeSkuSuffix { get; set; } = "-EXCH";
+
+    /// <summary>Passed to ShipAsync, which queues the "Shipment sent" email when its template is active</summary>
+    public bool NotifyCustomerOnShip { get; set; } = true;
+
+    public int LogRetentionDays { get; set; } = 90;
+
+    /// <summary>Safety cap on how many orders one List Orders call returns</summary>
+    public int MaxOrdersPerList { get; set; } = 250;
+
+    /// <summary>
+    /// One "customer shipping method = service key" pair per line. The key is what XPS's service mapping
+    /// turns into a carrier service; methods not listed get <see cref="DefaultServiceKey"/>.
+    /// </summary>
+    public string ServiceKeyMap { get; set; } = DefaultServiceKeyMap;
+
+    public string DefaultServiceKey { get; set; } = "FREE";
+
+    /// <summary>Comma-separated IPs allowed to call the webhooks. Empty allows any.</summary>
+    public string IpAllowlist { get; set; } = string.Empty;
+
+    // Sender (ship-from) address sent with every order
+    public string SenderName { get; set; } = "FMS Solutions";
+    public string SenderCompany { get; set; } = "FMS Solutions";
+    public string SenderAddress1 { get; set; } = "566 Falcon Fork Way";
+    public string SenderAddress2 { get; set; } = string.Empty;
+    public string SenderCity { get; set; } = "Saint Johns";
+    public string SenderState { get; set; } = "FL";
+    public string SenderZip { get; set; } = "32259";
+    public string SenderCountry { get; set; } = "US";
+    public string SenderPhone { get; set; } = "2012648365";
+    public string SenderEmail { get; set; } = "operations@fmsaccessories.com";
+
+    public const string DefaultServiceKeyMap =
+        "Free = FREE\n" +
+        "FedEx Priority Overnight = EXP-UPS-NEXTDAY\n" +
+        "FedEx Standard Overnight = EXP-UPS-NEXTDAY\n" +
+        "FedEx 2Day = EXP-UPS-2DAY\n" +
+        "FedEx International Priority = INTL-UPS\n" +
+        "FedEx International Economy = INTL-UPS";
+}

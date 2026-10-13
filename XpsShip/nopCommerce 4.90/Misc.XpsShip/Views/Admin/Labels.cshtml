@@ -1,0 +1,75 @@
+@model LabelsModel
+@inject Nop.Services.Helpers.IDateTimeHelper DateTimeHelper
+@{
+    Layout = "_AdminLayout";
+    NopHtml.SetActiveMenuItemSystemName(XpsShipDefaults.MenuSales);
+    ViewBag.PageTitle = "XPS Ship";
+}
+
+<div class="content-header clearfix">
+    <h1 class="float-left">XPS Ship <small>labels</small></h1>
+</div>
+
+<section class="content">
+    <div class="container-fluid">
+        <partial name="~/Plugins/Misc.XpsShip/Views/Admin/_Nav.cshtml" model="@("Labels")" />
+
+        <div class="card card-default">
+            <div class="card-body">
+                <p class="text-muted small">
+                    Every label XPS posted back. After voiding a label in XPS, click Void on its row: the shipment is deleted and its items go back into List Orders.
+                    The customer isn't told; the replacement label sends a new shipped email.
+                </p>
+                <form method="get" asp-action="Labels" class="form-inline mb-3">
+                    <input type="text" name="orderNumber" value="@Model.OrderNumber" class="form-control mr-2" placeholder="Order #" />
+                    <button type="submit" class="btn btn-default"><i class="fas fa-search"></i> Search</button>
+                </form>
+
+                @if (!Model.Rows.Any())
+                {
+                    <p class="text-muted">No labels yet.</p>
+                }
+                else
+                {
+                    <table class="table table-sm table-bordered table-striped">
+                        <thead>
+                            <tr><th>Order</th><th>Carrier</th><th>Tracking</th><th>Packages</th><th class="text-right">Label</th><th class="text-right">Billed lb</th><th>Posted</th><th>Status</th><th></th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var row in Model.Rows)
+                            {
+                                <tr class="@(row.Status == TrackingMapStatus.Voided ? "text-muted" : "")">
+                                    <td>@row.CustomOrderNumber</td>
+                                    <td>@Nop.Plugin.Misc.XpsShip.Logic.TrackingNumbers.DisplayName(row.Carrier)</td>
+                                    <td>
+                                        @foreach (var number in row.TrackingNumbers.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                                        {
+                                            var url = Nop.Plugin.Misc.XpsShip.Logic.TrackingNumbers.Url(row.Carrier, number);
+                                            if (url == null) { <span>@number</span> } else { <a href="@url" target="_blank" rel="noopener">@number</a> }
+                                            <br />
+                                        }
+                                    </td>
+                                    <td>@row.PackageCount</td>
+                                    <td class="text-right">@(row.LabelCost.HasValue ? "$" + row.LabelCost.Value.ToString("0.00") : "")</td>
+                                    <td class="text-right">@row.BilledWeightLb?.ToString("0.##")</td>
+                                    <td>@(await DateTimeHelper.ConvertToUserTimeAsync(row.CreatedOnUtc, DateTimeKind.Utc))</td>
+                                    <td>@(row.Status == TrackingMapStatus.Voided ? $"Voided {row.VoidedOnUtc:d}" : "Active")</td>
+                                    <td>
+                                        @if (Model.CanEdit && row.Status == TrackingMapStatus.Active)
+                                        {
+                                            <form asp-action="Void" asp-route-id="@row.Id" asp-route-orderNumber="@Model.OrderNumber" method="post"
+                                                  onsubmit="return confirm('Void label @row.PrimaryTrackingNumber? Its shipment on order @row.CustomOrderNumber will be deleted. Void it in XPS too.');">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">Void</button>
+                                            </form>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    <partial name="~/Plugins/Misc.XpsShip/Views/Admin/_Pager.cshtml" model="Model" />
+                }
+            </div>
+        </div>
+    </div>
+</section>

@@ -1,0 +1,126 @@
+using Nop.Core.Domain.Orders;
+using Nop.Core.Domain.Shipping;
+using Nop.Plugin.Misc.XpsShip.Domain;
+using Nop.Plugin.Misc.XpsShip.Logic;
+using Nop.Services.Catalog;
+using Nop.Services.Localization;
+using Nop.Services.Orders;
+using Nop.Services.Shipping;
+
+namespace Nop.Plugin.Misc.XpsShip.Services;
+
+/// <summary>
+/// Undoes a label voided in XPS. XPS doesn't tell the store about voids, so staff click Void on the label's row.
+/// </summary>
+public class XpsVoidService
+{
+    private readonly ILocalizationService _localizationService;
+    private readonly IOrderProcessingService _orderProcessingService;
+    private readonly IOrderService _orderService;
+    private readonly IProductService _productService;
+    private readonly IShipmentService _shipmentService;
+    private readonly XpsShipDataService _dataService;
+
+    public XpsVoidService(ILocalizationService localizationService,
+        IOrderProcessingService orderProcessingService,
+        IOrderService orderService,
+        IProductService productService,
+        IShipmentService shipmentService,
+        XpsShipDataService dataService)
+    {
+        _localizationService = localizationService;
+        _orderProcessingService = orderProcessingService;
+        _orderService = orderService;
+        _productService = productService;
+        _shipmentService = shipmentService;
+        _dataService = dataService;
+    }
+
+    /// <summary>Deletes the label's shipment and marks its row voided. Returns an error message, or null on success.</summary>
+    public async Task<string?> VoidAsync(int trackingMapId, string voidedBy)
+    {
+        var map = await _dataService.GetMapByIdAsync(trackingMapId);
+        if (map == null)
+            return "Label not found.";
+        if (map.Status == TrackingMapStatus.Voided)
+            return "This label is already voided.";
+
+        var order = await _orderService.GetOrderByGuidAsync(map.OrderGuid);
+        if (order == null)
+            return $"Order {map.CustomOrderNumber} not found.";
+
+        var shipment = (await _shipmentService.GetShipmentsByOrderIdAsync(order.Id))
+            .FirstOrDefault(s => string.Equals(s.TrackingNumber?.Trim(), map.PrimaryTrackingNumber, StringComparison.OrdinalIgnoreCase));
+
+        // A shipment already deleted by hand still lets the row be voided, so the order can be re-shipped cleanly
+        if (shipment != null)
+            await DeleteShipmentAsync(shipment);
+
+        map.Status = TrackingMapStatus.Voided;
+        map.VoidedOnUtc = DateTime.UtcNow;
+        await _dataService.UpdateMapAsync(map);
+
+        await RestoreShippingStatusAsync(order);
+
+        await _orderService.InsertOrderNoteAsync(new OrderNote
+        {
+            OrderId = order.Id,
+            Note = $"XPS label {map.PrimaryTrackingNumber} voided by {voidedBy}" + (shipment == null ? " (its shipment was already deleted)" : ""),
+            DisplayToCustomer = false,
+            CreatedOnUtc = DateTime.UtcNow
+        });
+
+        await _dataService.InsertLogAsync(new XpsShipWebhookLog
+        {
+            Endpoint = XpsShipDefaults.EndpointVoid,
+            HttpStatus = 200,
+            OrderGuid = order.OrderGuid,
+            CustomOrderNumber = order.CustomOrderNumber,
+            Message = $"Label {map.PrimaryTrackingNumber} voided by {voidedBy}"
+        });
+
+        return null;
+    }
+
+    /// <summary>What the admin Delete shipment button does: give back booked inventory, then delete</summary>
+    private async Task DeleteShipmentAsync(Shipment shipment)
+    {
+        foreach (var shipmentItem in await _shipmentService.GetShipmentItemsByShipmentIdAsync(shipment.Id))
+        {
+            var orderItem = await _orderService.GetOrderItemByIdAsync(shipmentItem.OrderItemId);
+            if (orderItem == null)
+                continue;
+
+            var product = await _productService.GetProductByIdAsync(orderItem.ProductId);
+            if (product == null)
+                continue;
+
+            await _productService.ReverseBookedInventoryAsync(product, shipmentItem,
+                string.Format(await _localizationService.GetResourceAsync("Admin.StockQuantityHistory.Messages.DeleteShipment"), shipment.OrderId));
+        }
+
+        await _shipmentService.DeleteShipmentAsync(shipment);
+    }
+
+    /// <summary>
+    /// The admin Delete shipment leaves the order's shipping status alone, so a fully shipped order would stay
+    /// Shipped and never come back to List Orders. Put it back to Partially shipped or Not yet shipped.
+    /// </summary>
+    private async Task RestoreShippingStatusAsync(Order order)
+    {
+        var otherShipped = (await _shipmentService.GetShipmentsByOrderIdAsync(order.Id, shipped: true)).Any();
+        var status = OrderRules.ShippingStatusAfterVoid(order.ShippingStatusId, otherShipped);
+        if (status == order.ShippingStatusId)
+            return;
+
+        order.ShippingStatusId = status;
+
+        // CheckOrderStatusAsync only moves an order forward. If shipping completed it, step it back to
+        // Processing so it reappears in List Orders (rule 1 takes only Pending and Processing).
+        if (order.OrderStatus == OrderStatus.Complete)
+            order.OrderStatus = OrderStatus.Processing;
+
+        await _orderService.UpdateOrderAsync(order);
+        await _orderProcessingService.CheckOrderStatusAsync(order);
+    }
+}
