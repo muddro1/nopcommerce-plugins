@@ -124,10 +124,22 @@ pick boxes and weights in XPS.
 
 When a label posts
 ------------------
-  - Unknown order: 404. Bad carrier, no tracking number, or an item id
-    that isn't a line on the order: 422, and nothing is created.
-  - A tracking number already recorded for the order (by XPS, or typed on
-    a shipment) is a duplicate: 200, nothing changes. Retries are safe.
+  - Unknown order: 404. Bad carrier, no tracking number, a tracking
+    number over 100 characters, or an item id that isn't a line on the
+    order: 422, and nothing is created.
+  - A tracking number already on a shipped shipment of the order is a
+    duplicate: 200, nothing changes. Retries are safe.
+  - The label is recorded before the shipment is marked shipped, so the
+    shipped email's tracking link knows the carrier XPS used.
+  - If anything fails before the shipment is marked shipped, the shipment
+    and the label record are removed and XPS gets 500, so its retry starts
+    clean. A retry also clears up an unshipped XPS shipment left with the
+    same number, and adds the label record to a shipped one that lacks it.
+    An unshipped shipment with that number made by hand gets 422 instead.
+  - If nopCommerce's ship step fails after it has marked the shipment
+    shipped, the shipment stays and the retry is a duplicate. An error in
+    the nopCommerce log names the shipment; check the order's shipping
+    status and email by hand.
   - Quantities above what's left are capped, with a warning.
   - No item list posted: everything left is shipped.
   - Shipment: first tracking number in Tracking number. Total weight is

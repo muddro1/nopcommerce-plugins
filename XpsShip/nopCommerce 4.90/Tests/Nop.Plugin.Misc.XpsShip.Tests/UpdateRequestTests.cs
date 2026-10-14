@@ -64,6 +64,14 @@ public class UpdateRequestTests
     }
 
     [Test]
+    public void A_tracking_number_too_long_to_store_is_an_error()
+    {
+        var request = UpdateRequest.Parse(Form(("orderId", "1"), ("carrier", "ups"), ("trackingNumbers", "1Z1," + new string('9', 101))));
+
+        request.Errors.Should().ContainSingle().Which.Should().Contain("longer than 100");
+    }
+
+    [Test]
     public void Admin_comment_lists_carrier_packages_and_label_cost()
     {
         var request = UpdateRequest.Parse(Form(("orderId", "1"), ("carrier", "ups"), ("trackingNumbers", "1Z1,1Z2"),

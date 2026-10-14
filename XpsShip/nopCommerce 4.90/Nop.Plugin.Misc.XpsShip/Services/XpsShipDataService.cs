@@ -86,6 +86,8 @@ public class XpsShipDataService
 
     public Task UpdateMapAsync(XpsShipTrackingMap map) => _mapRepository.UpdateAsync(map, false);
 
+    public Task DeleteMapAsync(XpsShipTrackingMap map) => _mapRepository.DeleteAsync(map, false);
+
     #endregion
 
     #region Webhook log

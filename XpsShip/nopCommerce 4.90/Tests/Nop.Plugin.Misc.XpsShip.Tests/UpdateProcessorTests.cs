@@ -33,6 +33,8 @@ public class UpdateProcessorTests
     private List<Shipment> _shipments;
     private List<ShipmentItem> _shipmentItems;
     private Mock<IOrderProcessingService> _processing;
+    private int _shipFailuresLeft;
+    private bool _mapExistedAtShip;
     private XpsUpdateProcessor _processor;
 
     [SetUp]
@@ -63,6 +65,10 @@ public class UpdateProcessorTests
             .Callback((Shipment s) => { s.Id = 100 + _shipments.Count; _shipments.Add(s); }).Returns(Task.CompletedTask);
         shipments.Setup(s => s.InsertShipmentItemAsync(It.IsAny<ShipmentItem>()))
             .Callback((ShipmentItem i) => _shipmentItems.Add(i)).Returns(Task.CompletedTask);
+        // Deleting a shipment cascades to its items, as the database does
+        shipments.Setup(s => s.DeleteShipmentAsync(It.IsAny<Shipment>()))
+            .Callback((Shipment s) => { _shipments.Remove(s); _shipmentItems.RemoveAll(i => i.ShipmentId == s.Id); })
+            .Returns(Task.CompletedTask);
 
         var measures = new Mock<IMeasureService>();
         measures.Setup(m => m.GetMeasureWeightByIdAsync(It.IsAny<int>())).ReturnsAsync(new MeasureWeight { SystemKeyword = "lb" });
@@ -70,7 +76,9 @@ public class UpdateProcessorTests
         var mapRepository = new Mock<IRepository<XpsShipTrackingMap>>();
         mapRepository.Setup(r => r.Table).Returns(() => _maps.AsQueryable());
         mapRepository.Setup(r => r.InsertAsync(It.IsAny<XpsShipTrackingMap>(), It.IsAny<bool>()))
-            .Callback((XpsShipTrackingMap m, bool _) => _maps.Add(m)).Returns(Task.CompletedTask);
+            .Callback((XpsShipTrackingMap m, bool _) => { m.Id = _maps.Count + 1; _maps.Add(m); }).Returns(Task.CompletedTask);
+        mapRepository.Setup(r => r.DeleteAsync(It.IsAny<XpsShipTrackingMap>(), It.IsAny<bool>()))
+            .Callback((XpsShipTrackingMap m, bool _) => _maps.Remove(m)).Returns(Task.CompletedTask);
 
         var dataService = new XpsShipDataService(new Mock<IRepository<XpsShipOrderFlag>>().Object, mapRepository.Object,
             new Mock<IRepository<XpsShipWebhookLog>>().Object);
@@ -80,7 +88,20 @@ public class UpdateProcessorTests
             Mock.Of<ILogger>(), measures.Object, orders.Object, Mock.Of<IPictureService>(), Mock.Of<IProductAttributeParser>(),
             products.Object, Mock.Of<IStateProvinceService>(), new MeasureSettings(), dataService, settings);
 
+        _shipFailuresLeft = 0;
+        _mapExistedAtShip = false;
         _processing = new Mock<IOrderProcessingService>();
+        // Like the real ShipAsync: refuses before marking anything when it fails, otherwise sets the shipped date
+        _processing.Setup(p => p.ShipAsync(It.IsAny<Shipment>(), It.IsAny<bool>()))
+            .Returns((Shipment s, bool _) =>
+            {
+                _mapExistedAtShip = _maps.Any(m => m.PrimaryTrackingNumber == s.TrackingNumber);
+                if (_shipFailuresLeft-- > 0)
+                    throw new InvalidOperationException("database timeout");
+
+                s.ShippedDateUtc = DateTime.UtcNow;
+                return Task.CompletedTask;
+            });
         _processor = new XpsUpdateProcessor(Mock.Of<IEventPublisher>(), Mock.Of<ILogger>(), _processing.Object, orders.Object,
             products.Object, shipments.Object, builder, dataService, settings);
     }
@@ -154,6 +175,71 @@ public class UpdateProcessorTests
             .Which.Note.Should().Be("Shipped via UPS in 3 packages: 1ZC602X70219206948, 1ZC602X70220017391, 1ZC602X70224542806");
         _maps.Single().PackageCount.Should().Be(3);
         log.CustomOrderNumber.Should().Be("8109");
+    }
+
+    [Test]
+    public async Task The_label_is_recorded_before_the_shipped_email_is_built()
+    {
+        // The email's %Shipment.XpsTrackingUrl% reads the carrier from the label row while ShipAsync runs
+        await _processor.ProcessAsync(Post("JD014600006281230704", (LineGuid.ToString(), 2)), new XpsShipWebhookLog());
+
+        _mapExistedAtShip.Should().BeTrue();
+    }
+
+    [Test]
+    public async Task A_post_that_fails_before_shipping_is_undone_and_the_retry_ships()
+    {
+        _shipFailuresLeft = 1;
+
+        var first = async () => await _processor.ProcessAsync(Post("1Z1", (LineGuid.ToString(), 2)), new XpsShipWebhookLog());
+        await first.Should().ThrowAsync<InvalidOperationException>();
+        _shipments.Should().BeEmpty();
+        _shipmentItems.Should().BeEmpty();
+        _maps.Should().BeEmpty();
+
+        var retry = await _processor.ProcessAsync(Post("1Z1", (LineGuid.ToString(), 2)), new XpsShipWebhookLog());
+
+        retry.HttpStatus.Should().Be(200);
+        retry.Summary.Should().StartWith("shipped");
+        _shipments.Should().ContainSingle().Which.ShippedDateUtc.Should().NotBeNull();
+        _shipmentItems.Should().ContainSingle().Which.Quantity.Should().Be(2);
+        _maps.Should().ContainSingle();
+    }
+
+    [Test]
+    public async Task A_retry_finds_an_unshipped_leftover_and_starts_again()
+    {
+        // As if the undo itself failed: an XPS shipment with no items and no label row
+        _shipments.Add(new Shipment { Id = 50, OrderId = 7, TrackingNumber = "1Z1", AdminComment = "XPS: UPS, 1 package: 1Z1" });
+
+        var result = await _processor.ProcessAsync(Post("1Z1", (LineGuid.ToString(), 2)), new XpsShipWebhookLog());
+
+        result.Summary.Should().StartWith("shipped");
+        _shipments.Should().ContainSingle().Which.Id.Should().NotBe(50);
+        _shipmentItems.Should().ContainSingle();
+    }
+
+    [Test]
+    public async Task A_shipped_label_with_no_row_gets_its_row_on_the_retry()
+    {
+        _shipments.Add(new Shipment { Id = 50, OrderId = 7, TrackingNumber = "1Z1", ShippedDateUtc = DateTime.UtcNow });
+
+        var result = await _processor.ProcessAsync(Post("1Z1", (LineGuid.ToString(), 2)), new XpsShipWebhookLog());
+
+        result.Summary.Should().StartWith("duplicate");
+        _maps.Should().ContainSingle().Which.Carrier.Should().Be("ups");
+        _processing.Verify(p => p.ShipAsync(It.IsAny<Shipment>(), It.IsAny<bool>()), Times.Never);
+    }
+
+    [Test]
+    public async Task An_unshipped_shipment_made_by_hand_is_left_alone()
+    {
+        _shipments.Add(new Shipment { Id = 50, OrderId = 7, TrackingNumber = "1Z1", AdminComment = "packed by Sam" });
+
+        var result = await _processor.ProcessAsync(Post("1Z1", (LineGuid.ToString(), 2)), new XpsShipWebhookLog());
+
+        result.HttpStatus.Should().Be(422);
+        _shipments.Should().ContainSingle().Which.Id.Should().Be(50);
     }
 
     [Test]

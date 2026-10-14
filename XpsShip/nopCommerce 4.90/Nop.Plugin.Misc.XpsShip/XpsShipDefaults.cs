@@ -16,6 +16,9 @@ public static class XpsShipDefaults
     public const int RequestBodyMaxLength = 8 * 1024;
     public const int ShipperReferenceMaxLength = 35;
 
+    /// <summary>Longest tracking number accepted: the size of XpsShip_TrackingMap.PrimaryTrackingNumber</summary>
+    public const int TrackingNumberMaxLength = 100;
+
     // Failed-key lockout: more than this many failures from one IP within the window blocks it for BlockMinutes
     public const int FailedKeyLimit = 30;
     public const int FailedKeyWindowMinutes = 10;

@@ -3,7 +3,7 @@
 **Plugin:** Misc.XpsShip 2.00, built against nopCommerce 4.90
 **Purpose:** confirm on a copy of the live store, with the real XPS account, what the automated tests and a local run could only confirm against sample data.
 
-The 88 automated tests cover the selection rules, mapping, tracking-number parsing, the Update Order parser and planner, the request guard, and the Update Order flow against mocked nopCommerce services. The plugin was also run end to end on a local nopCommerce 4.90 with sample data. That run covered:
+The 100 automated tests cover the selection rules, mapping, tracking-number parsing and links, the Update Order parser and planner, the request guard, and the Update Order flow against mocked nopCommerce services. That flow includes undoing a failed post and recovering on the retry. The plugin was also run end to end on a local nopCommerce 4.90 with sample data. That run covered:
 - install;
 - List Orders, Get Order and Update Order over HTTPS;
 - duplicate and unknown-line posts;
@@ -81,7 +81,8 @@ curl -s -H "x-rsis-key: $KEY" $SITE/xps/update \
 | T12 | `items[0][id]=` a random GUID | 422 naming the id; no shipment. |
 | T13 | Quantity 5 on a ×2 line | Shipment for 2; **Warnings** shows the cap. |
 | T15 | Three posts, one line each, on a 3-line order | Partially shipped, Partially shipped, then Shipped. It leaves List Orders only after the third. |
-| – | `carrier=ontrac` | 422. |
+| – | `carrier=ontrac`; a 120-character tracking number | 422 for each. |
+| – | `carrier=dhl`, `trackingNumbers=JD014600006281230704` (with the Part 5 template active) | The queued shipped email links to DHL's tracking page, not the order page. |
 
 - [ ] After T1, check which **order** status a paid, fully shipped order ends in (Processing or Complete). It depends on the store's order settings.
 

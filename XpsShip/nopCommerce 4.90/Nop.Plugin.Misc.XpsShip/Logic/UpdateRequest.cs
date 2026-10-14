@@ -58,6 +58,8 @@ public class UpdateRequest
         var numbers = Logic.TrackingNumbers.Clean(Get("trackingNumbers"));
         if (numbers.Count == 0)
             errors.Add("trackingNumbers is empty");
+        foreach (var number in numbers.Where(n => n.Length > XpsShipDefaults.TrackingNumberMaxLength))
+            errors.Add($"tracking number {number.Substring(0, 20)}... is longer than {XpsShipDefaults.TrackingNumberMaxLength} characters");
 
         // Group the item fields by index; the index only pairs an id with its quantity
         var items = new SortedDictionary<int, (string? Id, string? Quantity)>();

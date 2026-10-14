@@ -27,18 +27,25 @@ public class TrackingLinkResolver
     public async Task<string> ResolveAsync(Shipment shipment)
     {
         var order = await _orderService.GetOrderByIdAsync(shipment.OrderId);
-        var number = TrackingNumbers.StripCarrierText(shipment.TrackingNumber);
+        if (order == null)
+            return string.Empty;
 
-        if (order != null && !string.IsNullOrEmpty(number))
+        // A label XPS posted: its number is stored as sent, and the carrier is known. Look it up before any
+        // stripping, which would cut the letters off a DHL number like JD014600006281230704.
+        var stored = shipment.TrackingNumber?.Trim().ToUpperInvariant();
+        if (!string.IsNullOrEmpty(stored))
         {
-            var map = await _dataService.FindMapAsync(order.OrderGuid, number);
-            var url = TrackingNumbers.Url(map?.Carrier ?? TrackingNumbers.DetectCarrier(number), number);
+            var map = await _dataService.FindMapAsync(order.OrderGuid, stored);
+            var url = map == null ? null : TrackingNumbers.Url(map.Carrier, stored);
+            if (url != null)
+                return url;
+
+            // Typed by hand ("UPS 1ZC602X..."): strip the carrier text and go by the number's format
+            var number = TrackingNumbers.StripCarrierText(stored);
+            url = TrackingNumbers.Url(TrackingNumbers.DetectCarrier(number), number);
             if (url != null)
                 return url;
         }
-
-        if (order == null)
-            return string.Empty;
 
         var store = await _storeService.GetStoreByIdAsync(order.StoreId);
         var storeUrl = (store?.Url ?? string.Empty).TrimEnd('/');

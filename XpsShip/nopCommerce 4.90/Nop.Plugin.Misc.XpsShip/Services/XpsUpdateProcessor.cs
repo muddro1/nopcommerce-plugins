@@ -20,6 +20,9 @@ public record UpdateResult(int HttpStatus, string Summary);
 /// </summary>
 public class XpsUpdateProcessor
 {
+    /// <summary>Starts every XPS shipment's admin comment; marks shipments this plugin created</summary>
+    public const string AdminCommentPrefix = "XPS:";
+
     // Per-order lock: two posts for one order at once could otherwise both see the same lines as unshipped
     private static readonly ConcurrentDictionary<Guid, SemaphoreSlim> OrderLocks = new();
 
@@ -85,15 +88,37 @@ public class XpsUpdateProcessor
     private async Task<UpdateResult> ShipAsync(Order order, UpdateRequest request)
     {
         var primary = request.TrackingNumbers[0];
+        var map = await _dataService.FindMapAsync(order.OrderGuid, primary);
+        var existing = (await _shipmentService.GetShipmentsByOrderIdAsync(order.Id))
+            .FirstOrDefault(s => string.Equals(s.TrackingNumber?.Trim(), primary, StringComparison.OrdinalIgnoreCase));
 
-        // XPS retries and staff re-sending an update must not ship twice. A voided label's number counts too:
-        // re-posting it must not bring back a shipment staff deleted.
-        if (await _dataService.FindMapAsync(order.OrderGuid, primary) != null
-            || (await _shipmentService.GetShipmentsByOrderIdAsync(order.Id))
-                .Any(s => string.Equals(s.TrackingNumber?.Trim(), primary, StringComparison.OrdinalIgnoreCase)))
+        // XPS retries and staff re-sending an update must not ship twice
+        if (existing?.ShippedDateUtc != null)
         {
-            return new UpdateResult(200, $"duplicate: {primary} is already recorded on order {order.CustomOrderNumber}");
+            // An earlier attempt that stopped after shipping can leave no label row; add it so the label can be voided
+            if (map == null)
+                await _dataService.InsertMapAsync(NewMap(order, request));
+
+            return new UpdateResult(200, $"duplicate: {primary} is already shipped on order {order.CustomOrderNumber}");
         }
+
+        // Re-posting a voided label's number must not bring back a shipment staff deleted
+        if (map?.Status == TrackingMapStatus.Voided)
+            return new UpdateResult(200, $"duplicate: {primary} was voided on order {order.CustomOrderNumber}");
+
+        if (existing != null)
+        {
+            // An unshipped shipment with this number is left over from a post that failed part way, so start again.
+            // One staff made by hand is theirs to ship or delete.
+            if (existing.AdminComment?.StartsWith(AdminCommentPrefix, StringComparison.Ordinal) != true)
+                return new UpdateResult(422, $"order {order.CustomOrderNumber} already has an unshipped shipment with tracking number {primary}; ship or delete it in admin");
+
+            await _shipmentService.DeleteShipmentAsync(existing);
+        }
+
+        // An active label row whose shipment never shipped is from the same kind of failed post
+        if (map != null)
+            await _dataService.DeleteMapAsync(map);
 
         if (order.PickupInStore)
             return new UpdateResult(422, "the order is pickup in store");
@@ -126,70 +151,121 @@ public class XpsUpdateProcessor
             AdminComment = AdminComment(carrierName, request),
             CreatedOnUtc = DateTime.UtcNow
         };
-        await _shipmentService.InsertShipmentAsync(shipment);
 
-        foreach (var planned in plan.Items)
+        // There's no transaction across these steps: nopCommerce opens a connection per call, and one scope over
+        // several connections can escalate to a distributed transaction. Instead, anything that fails before the
+        // shipment is marked shipped is undone, so XPS's retry starts clean.
+        XpsShipTrackingMap? newMap = null;
+        try
         {
-            var line = lines.First(l => l.Item.OrderItemGuid == planned.Line.OrderItemGuid);
-            await _shipmentService.InsertShipmentItemAsync(new ShipmentItem
+            await _shipmentService.InsertShipmentAsync(shipment);
+
+            foreach (var planned in plan.Items)
             {
-                ShipmentId = shipment.Id,
-                OrderItemId = line.Item.Id,
-                Quantity = planned.Quantity,
-                WarehouseId = await WarehouseIdAsync(line.Product)
-            });
+                var line = lines.First(l => l.Item.OrderItemGuid == planned.Line.OrderItemGuid);
+                await _shipmentService.InsertShipmentItemAsync(new ShipmentItem
+                {
+                    ShipmentId = shipment.Id,
+                    OrderItemId = line.Item.Id,
+                    Quantity = planned.Quantity,
+                    WarehouseId = await WarehouseIdAsync(line.Product)
+                });
+            }
+
+            // Before ShipAsync: the shipped email's %Shipment.XpsTrackingUrl% reads the carrier from this row
+            newMap = NewMap(order, request);
+            await _dataService.InsertMapAsync(newMap);
+
+            await _eventPublisher.PublishAsync(new ShipmentCreatedEvent(shipment));
+            await _eventPublisher.PublishAsync(new ShipmentTrackingNumberSetEvent(shipment));
+
+            // Sets ShippedDateUtc and the shipping status, adds nopCommerce's note, queues the "Shipment sent" email
+            await _orderProcessingService.ShipAsync(shipment, _settings.NotifyCustomerOnShip);
+        }
+        catch (Exception ex)
+        {
+            if (shipment.ShippedDateUtc == null)
+            {
+                await UndoAsync(order, shipment, newMap);
+                throw;
+            }
+
+            // ShipAsync failed after marking the shipment shipped: it stays, and a retry is answered as a duplicate.
+            // What ShipAsync didn't get to (shipping status, email, its note) needs a look in admin.
+            await _logger.ErrorAsync($"XPS Ship: order {order.CustomOrderNumber}: shipment {shipment.Id} ({primary}) is marked shipped, " +
+                "but nopCommerce's ship step failed after that. Check the order's shipping status and the shipped email.", ex);
+            throw;
         }
 
-        await _orderService.InsertOrderNoteAsync(new OrderNote
+        // The shipment is shipped; a failed note must not make XPS retry it
+        try
         {
-            OrderId = order.Id,
-            Note = $"XPS Ship: shipment added, {carrierName} {primary}",
-            DisplayToCustomer = false,
-            CreatedOnUtc = DateTime.UtcNow
-        });
-
-        await _eventPublisher.PublishAsync(new ShipmentCreatedEvent(shipment));
-        await _eventPublisher.PublishAsync(new ShipmentTrackingNumberSetEvent(shipment));
-
-        // Sets ShippedDateUtc and the shipping status, adds nopCommerce's note, queues the "Shipment sent" email
-        await _orderProcessingService.ShipAsync(shipment, _settings.NotifyCustomerOnShip);
-
-        if (request.TrackingNumbers.Count > 1)
-        {
-            // Customer-visible, so every number shows on their order page. Inserted directly rather than through
-            // the admin's add-note path, so no "New order note" email goes out on top of the shipped email.
             await _orderService.InsertOrderNoteAsync(new OrderNote
             {
                 OrderId = order.Id,
-                Note = $"Shipped via {carrierName} in {request.TrackingNumbers.Count} packages: {string.Join(", ", request.TrackingNumbers)}",
-                DisplayToCustomer = true,
+                Note = $"XPS Ship: shipment {shipment.Id} added, {carrierName} {primary}",
+                DisplayToCustomer = false,
                 CreatedOnUtc = DateTime.UtcNow
             });
-        }
 
-        await _dataService.InsertMapAsync(new XpsShipTrackingMap
+            if (request.TrackingNumbers.Count > 1)
+            {
+                // Customer-visible, so every number shows on their order page. Inserted directly rather than through
+                // the admin's add-note path, so no "New order note" email goes out on top of the shipped email.
+                await _orderService.InsertOrderNoteAsync(new OrderNote
+                {
+                    OrderId = order.Id,
+                    Note = $"Shipped via {carrierName} in {request.TrackingNumbers.Count} packages: {string.Join(", ", request.TrackingNumbers)}",
+                    DisplayToCustomer = true,
+                    CreatedOnUtc = DateTime.UtcNow
+                });
+            }
+        }
+        catch (Exception ex)
         {
-            OrderGuid = order.OrderGuid,
-            CustomOrderNumber = order.CustomOrderNumber,
-            PrimaryTrackingNumber = primary,
-            Carrier = request.Carrier ?? string.Empty,
-            TrackingNumbers = string.Join(",", request.TrackingNumbers),
-            PackageCount = request.TrackingNumbers.Count,
-            LabelCost = request.LabelCost,
-            BilledWeightLb = request.BilledWeightLb,
-            Status = TrackingMapStatus.Active,
-            CreatedOnUtc = DateTime.UtcNow
-        });
+            await _logger.ErrorAsync($"XPS Ship: order {order.CustomOrderNumber}: shipment {shipment.Id} shipped, but its order notes could not be added", ex);
+        }
 
         var units = plan.Items.Sum(i => i.Quantity);
         return new UpdateResult(200, $"shipped: shipment {shipment.Id}, {plan.Items.Count} line(s), {units} unit(s), {carrierName} {primary}");
+    }
+
+    private static XpsShipTrackingMap NewMap(Order order, UpdateRequest request) => new()
+    {
+        OrderGuid = order.OrderGuid,
+        CustomOrderNumber = order.CustomOrderNumber,
+        PrimaryTrackingNumber = request.TrackingNumbers[0],
+        Carrier = request.Carrier ?? string.Empty,
+        TrackingNumbers = string.Join(",", request.TrackingNumbers),
+        PackageCount = request.TrackingNumbers.Count,
+        LabelCost = request.LabelCost,
+        BilledWeightLb = request.BilledWeightLb,
+        Status = TrackingMapStatus.Active,
+        CreatedOnUtc = DateTime.UtcNow
+    };
+
+    /// <summary>Removes what a failed post created. Deleting the shipment removes its items too (cascade).</summary>
+    private async Task UndoAsync(Order order, Shipment shipment, XpsShipTrackingMap? map)
+    {
+        try
+        {
+            if (map is { Id: > 0 })
+                await _dataService.DeleteMapAsync(map);
+            if (shipment.Id > 0)
+                await _shipmentService.DeleteShipmentAsync(shipment);
+        }
+        catch (Exception ex)
+        {
+            // The retry still recovers: it deletes an unshipped XPS shipment and a stale label row before starting again
+            await _logger.ErrorAsync($"XPS Ship: order {order.CustomOrderNumber}: could not undo a failed shipment", ex);
+        }
     }
 
     /// <summary>"XPS: UPS, 2 packages: 1Z..., 1Z...; label $14.82"</summary>
     public static string AdminComment(string carrierName, UpdateRequest request)
     {
         var count = request.TrackingNumbers.Count;
-        var comment = $"XPS: {carrierName}, {count} package{(count == 1 ? "" : "s")}: {string.Join(", ", request.TrackingNumbers)}";
+        var comment = $"{AdminCommentPrefix} {carrierName}, {count} package{(count == 1 ? "" : "s")}: {string.Join(", ", request.TrackingNumbers)}";
         if (request.LabelCost.HasValue)
             comment += $"; label ${XpsFormat.Money(request.LabelCost.Value)}";
 
