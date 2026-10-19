@@ -15,6 +15,7 @@ public class ConfigurationModel
     [NopResourceDisplayName(P + "ExchangeSkuSuffix")] public string? ExchangeSkuSuffix { get; set; }
     [NopResourceDisplayName(P + "NotifyCustomerOnShip")] public bool NotifyCustomerOnShip { get; set; }
     [NopResourceDisplayName(P + "LogRetentionDays")] public int LogRetentionDays { get; set; }
+    [NopResourceDisplayName(P + "OrdersPlacedFrom")] public DateTime? OrdersPlacedFrom { get; set; }
     [NopResourceDisplayName(P + "MaxOrdersPerList")] public int MaxOrdersPerList { get; set; }
     [NopResourceDisplayName(P + "ServiceKeyMap")] public string? ServiceKeyMap { get; set; }
     [NopResourceDisplayName(P + "DefaultServiceKey")] public string? DefaultServiceKey { get; set; }

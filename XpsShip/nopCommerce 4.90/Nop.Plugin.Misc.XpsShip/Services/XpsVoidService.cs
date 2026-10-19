@@ -1,5 +1,7 @@
+using Nop.Core.Domain.Messages;
 using Nop.Core.Domain.Orders;
 using Nop.Core.Domain.Shipping;
+using Nop.Data;
 using Nop.Plugin.Misc.XpsShip.Domain;
 using Nop.Plugin.Misc.XpsShip.Logic;
 using Nop.Services.Catalog;
@@ -19,6 +21,7 @@ public class XpsVoidService
     private readonly IOrderService _orderService;
     private readonly IProductService _productService;
     private readonly IShipmentService _shipmentService;
+    private readonly IRepository<QueuedEmail> _queuedEmailRepository;
     private readonly XpsShipDataService _dataService;
 
     public XpsVoidService(ILocalizationService localizationService,
@@ -26,6 +29,7 @@ public class XpsVoidService
         IOrderService orderService,
         IProductService productService,
         IShipmentService shipmentService,
+        IRepository<QueuedEmail> queuedEmailRepository,
         XpsShipDataService dataService)
     {
         _localizationService = localizationService;
@@ -33,6 +37,7 @@ public class XpsVoidService
         _orderService = orderService;
         _productService = productService;
         _shipmentService = shipmentService;
+        _queuedEmailRepository = queuedEmailRepository;
         _dataService = dataService;
     }
 
@@ -61,11 +66,13 @@ public class XpsVoidService
         await _dataService.UpdateMapAsync(map);
 
         await RestoreShippingStatusAsync(order);
+        var emailsDeleted = await DeleteUnsentShippedEmailsAsync(map);
 
         await _orderService.InsertOrderNoteAsync(new OrderNote
         {
             OrderId = order.Id,
-            Note = $"XPS label {map.PrimaryTrackingNumber} voided by {voidedBy}" + (shipment == null ? " (its shipment was already deleted)" : ""),
+            Note = $"XPS label {map.PrimaryTrackingNumber} voided by {voidedBy}" + (shipment == null ? " (its shipment was already deleted)" : "")
+                + (emailsDeleted > 0 ? $". Deleted {emailsDeleted} unsent shipped email(s)." : ""),
             DisplayToCustomer = false,
             CreatedOnUtc = DateTime.UtcNow
         });
@@ -80,6 +87,27 @@ public class XpsVoidService
         });
 
         return null;
+    }
+
+    /// <summary>
+    /// Deletes the label's shipped email while it still waits in the queue (the template's send delay).
+    /// Found by the tracking number in the body, so the template must include %Shipment.TrackingNumber% or %Shipment.XpsTrackingUrl%.
+    /// </summary>
+    private async Task<int> DeleteUnsentShippedEmailsAsync(XpsShipTrackingMap map)
+    {
+        var tracking = map.PrimaryTrackingNumber;
+        if (string.IsNullOrWhiteSpace(tracking))
+            return 0;
+
+        var postedFromUtc = map.CreatedOnUtc.AddMinutes(-5);
+        var emails = await _queuedEmailRepository.Table
+            .Where(e => e.SentOnUtc == null && e.CreatedOnUtc >= postedFromUtc && e.Body.Contains(tracking))
+            .ToListAsync();
+
+        foreach (var email in emails)
+            await _queuedEmailRepository.DeleteAsync(email, false);
+
+        return emails.Count;
     }
 
     /// <summary>What the admin Delete shipment button does: give back booked inventory, then delete</summary>

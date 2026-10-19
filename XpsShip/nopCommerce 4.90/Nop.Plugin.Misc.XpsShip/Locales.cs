@@ -19,6 +19,8 @@ public static class Locales
         [P + "NotifyCustomerOnShip.Hint"] = "Queue nopCommerce's \"Shipment sent\" email when a label posts. It only goes out if that message template is active.",
         [P + "LogRetentionDays"] = "Keep log (days)",
         [P + "LogRetentionDays.Hint"] = "Webhook log rows hold customer addresses and are deleted after this many days.",
+        [P + "OrdersPlacedFrom"] = "Only orders placed on or after",
+        [P + "OrdersPlacedFrom.Hint"] = "Older orders are never sent to XPS and are not listed in the Preview. Leave empty to send every open order.",
         [P + "MaxOrdersPerList"] = "Most orders per list",
         [P + "MaxOrdersPerList.Hint"] = "Safety cap on how many orders one List Orders call returns, oldest first.",
         [P + "ServiceKeyMap"] = "Service keys",

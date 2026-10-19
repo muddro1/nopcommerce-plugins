@@ -1,0 +1,141 @@
+@model ConfigurationModel
+@{
+    Layout = "_AdminLayout";
+    NopHtml.SetActiveMenuItemSystemName(XpsShipDefaults.MenuSales);
+    ViewBag.PageTitle = "XPS Ship";
+    const string P = XpsShipDefaults.LocalePrefix + "Settings.";
+}
+
+<div class="content-header clearfix">
+    <h1 class="float-left">XPS Ship <small>webhooks</small></h1>
+</div>
+
+<section class="content">
+    <div class="container-fluid">
+        <partial name="~/Plugins/Misc.XpsShip/Views/Admin/_Nav.cshtml" model="@("Configure")" />
+
+        <div class="card card-default">
+            <div class="card-header"><h3 class="card-title">Connect XPS</h3></div>
+            <div class="card-body">
+                <p>
+                    In eCommerce Webship: gear icon → eCommerce Integrations → Add eCommerce Integration → <strong>Webhooks</strong>.
+                    Paste the URLs and the key below, turn on <strong>Support Partial Shipments</strong>, and save.
+                    Then map each service key (Settings, below) to a carrier service in XPS's service mapping.
+                </p>
+                <table class="table table-sm table-bordered">
+                    <tbody>
+                        <tr><th style="width: 20%">List Orders URL</th><td><code class="xps-copy">@Model.ListOrdersUrl</code></td></tr>
+                        <tr><th>Update Order URL</th><td><code class="xps-copy">@Model.UpdateOrderUrl</code></td></tr>
+                        <tr><th>Get Order URL</th><td><code class="xps-copy">@Model.GetOrderUrl</code></td></tr>
+                        <tr>
+                            <th>Secret key</th>
+                            <td>
+                                <code class="xps-copy">@Model.SecretKey</code>
+                                @if (Model.CanEdit)
+                                {
+                                    <form asp-action="RegenerateKey" method="post" class="d-inline ml-3"
+                                          onsubmit="return confirm('Generate a new key? XPS is refused until the new key is entered there.');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Regenerate key</button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p class="text-muted small mb-0">
+                    The URLs only answer over HTTPS and only with the key in the <code>@XpsShipDefaults.KeyHeader</code> header.
+                    The page shows the key to anyone who can view orders; regenerate it if it leaks.
+                </p>
+            </div>
+        </div>
+
+        <form asp-action="Configure" method="post">
+            <div class="card card-default">
+                <div class="card-header"><h3 class="card-title">Settings</h3></div>
+                <div class="card-body">
+                    <div class="form-group row">
+                        <div class="col-md-3"><nop-label asp-for="Enabled" /></div>
+                        <div class="col-md-9"><nop-editor asp-for="Enabled" /><small class="form-text text-muted">@T(P + "Enabled.Hint")</small></div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="col-md-3"><nop-label asp-for="ShipBeforePaymentMethods" /></div>
+                        <div class="col-md-9"><nop-editor asp-for="ShipBeforePaymentMethods" /><small class="form-text text-muted">@T(P + "ShipBeforePaymentMethods.Hint")</small></div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="col-md-3"><nop-label asp-for="HideFullyBackorderedOrders" /></div>
+                        <div class="col-md-9"><nop-editor asp-for="HideFullyBackorderedOrders" /><small class="form-text text-muted">@T(P + "HideFullyBackorderedOrders.Hint")</small></div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="col-md-3"><nop-label asp-for="ExchangeSkuSuffix" /></div>
+                        <div class="col-md-9"><nop-editor asp-for="ExchangeSkuSuffix" /><small class="form-text text-muted">@T(P + "ExchangeSkuSuffix.Hint")</small></div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="col-md-3"><nop-label asp-for="NotifyCustomerOnShip" /></div>
+                        <div class="col-md-9"><nop-editor asp-for="NotifyCustomerOnShip" /><small class="form-text text-muted">@T(P + "NotifyCustomerOnShip.Hint")</small></div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="col-md-3"><nop-label asp-for="ServiceKeyMap" /></div>
+                        <div class="col-md-9"><nop-textarea asp-for="ServiceKeyMap" /><small class="form-text text-muted">@T(P + "ServiceKeyMap.Hint")</small></div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="col-md-3"><nop-label asp-for="DefaultServiceKey" /></div>
+                        <div class="col-md-9"><nop-editor asp-for="DefaultServiceKey" /><small class="form-text text-muted">@T(P + "DefaultServiceKey.Hint")</small></div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="col-md-3"><nop-label asp-for="OrdersPlacedFrom" /></div>
+                        <div class="col-md-9"><nop-editor asp-for="OrdersPlacedFrom" /><small class="form-text text-muted">@T(P + "OrdersPlacedFrom.Hint")</small></div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="col-md-3"><nop-label asp-for="MaxOrdersPerList" /></div>
+                        <div class="col-md-9"><nop-editor asp-for="MaxOrdersPerList" /><small class="form-text text-muted">@T(P + "MaxOrdersPerList.Hint")</small></div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="col-md-3"><nop-label asp-for="LogRetentionDays" /></div>
+                        <div class="col-md-9"><nop-editor asp-for="LogRetentionDays" /><small class="form-text text-muted">@T(P + "LogRetentionDays.Hint")</small></div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="col-md-3"><nop-label asp-for="IpAllowlist" /></div>
+                        <div class="col-md-9"><nop-editor asp-for="IpAllowlist" /><small class="form-text text-muted">@T(P + "IpAllowlist.Hint")</small></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card card-default">
+                <div class="card-header"><h3 class="card-title">Ship from (sender)</h3></div>
+                <div class="card-body">
+                    <div class="form-group row"><div class="col-md-3"><nop-label asp-for="SenderName" /></div><div class="col-md-9"><nop-editor asp-for="SenderName" /></div></div>
+                    <div class="form-group row"><div class="col-md-3"><nop-label asp-for="SenderCompany" /></div><div class="col-md-9"><nop-editor asp-for="SenderCompany" /></div></div>
+                    <div class="form-group row"><div class="col-md-3"><nop-label asp-for="SenderAddress1" /></div><div class="col-md-9"><nop-editor asp-for="SenderAddress1" /></div></div>
+                    <div class="form-group row"><div class="col-md-3"><nop-label asp-for="SenderAddress2" /></div><div class="col-md-9"><nop-editor asp-for="SenderAddress2" /></div></div>
+                    <div class="form-group row"><div class="col-md-3"><nop-label asp-for="SenderCity" /></div><div class="col-md-9"><nop-editor asp-for="SenderCity" /></div></div>
+                    <div class="form-group row"><div class="col-md-3"><nop-label asp-for="SenderState" /></div><div class="col-md-9"><nop-editor asp-for="SenderState" /></div></div>
+                    <div class="form-group row"><div class="col-md-3"><nop-label asp-for="SenderZip" /></div><div class="col-md-9"><nop-editor asp-for="SenderZip" /></div></div>
+                    <div class="form-group row"><div class="col-md-3"><nop-label asp-for="SenderCountry" /></div><div class="col-md-9"><nop-editor asp-for="SenderCountry" /></div></div>
+                    <div class="form-group row"><div class="col-md-3"><nop-label asp-for="SenderPhone" /></div><div class="col-md-9"><nop-editor asp-for="SenderPhone" /></div></div>
+                    <div class="form-group row"><div class="col-md-3"><nop-label asp-for="SenderEmail" /></div><div class="col-md-9"><nop-editor asp-for="SenderEmail" /></div></div>
+                </div>
+            </div>
+
+            @if (Model.CanEdit)
+            {
+                <button type="submit" class="btn btn-primary mb-3"><i class="far fa-save"></i> @T("Admin.Common.Save")</button>
+            }
+        </form>
+    </div>
+</section>
+
+<script>
+    // Click a URL or the key to select it for copying
+    document.querySelectorAll('.xps-copy').forEach(function (el) {
+        el.style.cursor = 'pointer';
+        el.title = 'Click to copy';
+        el.addEventListener('click', function () {
+            var range = document.createRange();
+            range.selectNodeContents(el);
+            var selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            if (navigator.clipboard) navigator.clipboard.writeText(el.textContent.trim());
+        });
+    });
+</script>

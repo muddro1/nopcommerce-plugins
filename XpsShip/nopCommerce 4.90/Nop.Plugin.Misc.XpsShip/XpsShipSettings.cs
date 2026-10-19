@@ -23,6 +23,9 @@ public class XpsShipSettings : ISettings
 
     public int LogRetentionDays { get; set; } = 90;
 
+    /// <summary>Orders placed before this are never sent, so turning the plugin on doesn't send years of unshipped orders. Null sends all.</summary>
+    public DateTime? OrdersPlacedFromUtc { get; set; }
+
     /// <summary>Safety cap on how many orders one List Orders call returns</summary>
     public int MaxOrdersPerList { get; set; } = 250;
 

@@ -1,6 +1,6 @@
 # nopCommerce plugins
 
-Seven plugins for nopCommerce. Four target both **nopCommerce 4.50** and **nopCommerce 4.90** and are kept here as source and as a compiled folder you can drop straight onto a server; the two builds of a plugin behave the same and differ only in the nopCommerce version they compile against. Customer profile and XPS Ship webhooks target 4.90 only and follow the same layout. Estimate Builder targets 4.90 only and lives in its own repository, included here as a git submodule (see [Repository layout](#repository-layout)).
+Seven plugins for nopCommerce. Five target both **nopCommerce 4.50** and **nopCommerce 4.90** and are kept here as source and as a compiled folder you can drop straight onto a server; the two builds of a plugin behave the same and differ only in the nopCommerce version they compile against. Customer profile targets 4.90 only and follows the same layout. Estimate Builder targets 4.90 only and lives in its own repository, included here as a git submodule (see [Repository layout](#repository-layout)).
 
 | Plugin | System name | Version (4.50 / 4.90) | Does |
 |---|---|---|---|
@@ -8,9 +8,9 @@ Seven plugins for nopCommerce. Four target both **nopCommerce 4.50** and **nopCo
 | [Handling fee for small orders](HandlingFee/Readme.txt) | `Misc.HandlingFee` | 1.03 / 2.11 | Charges a fee on small physical orders that qualify for free shipping |
 | [Customer has only these products](HasOnlyProducts/Readme.txt) | `DiscountRequirement.HasOnlyProducts` | 1.02 / 2.00 | Discount requirement rule: the cart holds all of the listed products, or any one of them, and optionally nothing else |
 | [Estimate builder](estimate-builder/README.md) | `Misc.EstimateBuilder` | — / 1.3.0 | Customers save products and their options into named estimates, export them to Excel or PDF, or move them to the cart; admins manage every estimate and build quotes for contacts without an account |
-| [Accurate attribute combination pricing](AttributeCombinationPricing/Readme.txt) | `Misc.AttributeCombinationPricing` | 1.01 / 2.00 | Corrects the price label on an Associated-to-Product attribute value - on the product page, cart, checkout and newly placed orders - so it reflects the attribute combination's Overridden price instead of the associated product's own price |
+| [Accurate attribute combination pricing](AttributeCombinationPricing/Readme.txt) | `Misc.AttributeCombinationPricing` | 1.01 / 2.01 | Corrects the price label on an Associated-to-Product attribute value - on the product page, cart, checkout and newly placed orders - so it reflects the attribute combination's Overridden price instead of the associated product's own price |
 | [Customer profile](CustomerProfile/Readme.txt) | `Misc.CustomerProfile` | — / 1.0.8 | B2B customer details: BMW dealership, tax exemption certificates with an exempt category and review, expiry reminders and automatic removal, an admin-only Net 30 payment method, and additional contacts who get copies of chosen order emails |
-| [XPS Ship webhooks](XpsShip/Readme.txt) | `Misc.XpsShip` | — / 2.00 | XPS Ship pulls ready-to-ship orders and posts each label back; every label becomes a nopCommerce shipment with its tracking number, marked shipped. Holds, exchange release, backorder rules, voids and a carrier tracking-link email token |
+| [XPS Ship webhooks](XpsShip/Readme.txt) | `Misc.XpsShip` | 1.01 / 2.01 | XPS Ship pulls ready-to-ship orders and posts each label back; every label becomes a nopCommerce shipment with its tracking number, marked shipped. Holds, exchange release, backorder rules, voids and a carrier tracking-link email token |
 
 Each plugin has its own `Readme.txt` (Estimate Builder: `README.md`) covering configuration, edge cases and upgrade steps. Read that before deploying. The summaries below only cover what you would want to know before opening one.
 
@@ -62,7 +62,7 @@ Uninstalling keeps its data, tax certificates included, so a reinstall picks it 
 
 XPS Ship (eCommerce Webship) polls three HTTPS URLs on the store, all requiring a secret key. List Orders hands it every ready-to-ship order: paid or a ship-before-payment method, not held, not an unreleased exchange order, and not fully backordered. Update Order turns each label into one nopCommerce shipment with the posted lines and tracking number. That shipment is marked shipped through `ShipAsync`, so status, notes and the shipped email work as when staff ship by hand. Get Order serves partial shipments. Orders and lines travel as their GUIDs, so the plugin keeps no numeric ids and survives a move to a new install.
 
-The admin page (Sales → XPS Ship) has a Preview of exactly what XPS would receive and why other orders are left out. It also has tabs for hold and exchange release, a Labels tab with Void, the webhook log, and catalog warnings. XPS never reports voids, so staff click Void after voiding in XPS. That deletes the shipment and, unlike nopCommerce's own Delete shipment, puts the shipping status back. The token `%Shipment.XpsTrackingUrl%` gives shipped emails a working carrier link. The design spec is `docs/superpowers/specs/2026-09-24-xps-ship-design.md`. A 4.50 build is planned.
+The admin page (Sales → XPS Ship) has a Preview of exactly what XPS would receive and why other orders are left out. It also has tabs for hold and exchange release, a Labels tab with Void, the webhook log, and catalog warnings. XPS never reports voids, so staff click Void after voiding in XPS. That deletes the shipment and, unlike nopCommerce's own Delete shipment, puts the shipping status back. The token `%Shipment.XpsTrackingUrl%` gives shipped emails a working carrier link. The design spec is `docs/superpowers/specs/2026-09-24-xps-ship-design.md`.
 
 ## Repository layout
 

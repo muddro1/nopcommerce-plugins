@@ -17,7 +17,7 @@
         <div class="card card-default">
             <div class="card-body">
                 <p class="text-muted small">
-                    Every label XPS posted back. After voiding a label in XPS, click Void on its row: the shipment is deleted and its items go back into List Orders.
+                    Every label XPS posted back. Void here does not void anything in XPS. Void the label in XPS first, then click Void on its row: the shipment is deleted and its items go back into List Orders.
                     The customer isn't told; the replacement label sends a new shipped email.
                 </p>
                 <form method="get" asp-action="Labels" class="form-inline mb-3">
@@ -58,7 +58,7 @@
                                         @if (Model.CanEdit && row.Status == TrackingMapStatus.Active)
                                         {
                                             <form asp-action="Void" asp-route-id="@row.Id" asp-route-orderNumber="@Model.OrderNumber" method="post"
-                                                  onsubmit="return confirm('Void label @row.PrimaryTrackingNumber? Its shipment on order @row.CustomOrderNumber will be deleted. Void it in XPS too.');">
+                                                  onsubmit="return confirm('Void label @row.PrimaryTrackingNumber? This deletes the shipment on order @row.CustomOrderNumber in nopCommerce only. It does NOT void the label in XPS: void it there too, or the carrier still bills it.');">
                                                 <button type="submit" class="btn btn-sm btn-outline-danger">Void</button>
                                             </form>
                                         }

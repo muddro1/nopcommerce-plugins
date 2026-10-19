@@ -7,6 +7,23 @@ namespace Nop.Plugin.Misc.XpsShip.Logic;
 /// <summary>XPS wants decimals as strings: 2 places for money, 4 for weight</summary>
 public static class XpsFormat
 {
+    private const string ReshipSuffix = "-r";
+
+    /// <summary>
+    /// The order's GUID, plus "-r1", "-r2"... once labels have been voided: XPS never re-imports an order ID it has
+    /// shipped, so a voided order goes back under a new one.
+    /// </summary>
+    public static string OrderId(Guid orderGuid, int voidedLabels) =>
+        voidedLabels > 0 ? $"{orderGuid}{ReshipSuffix}{voidedLabels}" : orderGuid.ToString();
+
+    /// <summary>Reads an ID from <see cref="OrderId"/> back to the order's GUID. A GUID is hex, so "-r" can't occur inside one.</summary>
+    public static bool TryParseOrderId(string? orderId, out Guid orderGuid)
+    {
+        var id = orderId?.Trim() ?? string.Empty;
+        var suffix = id.IndexOf(ReshipSuffix, StringComparison.OrdinalIgnoreCase);
+        return Guid.TryParse(suffix >= 0 ? id[..suffix] : id, out orderGuid);
+    }
+
     public static string Money(decimal value) => Math.Round(value, 2).ToString("0.00", CultureInfo.InvariantCulture);
 
     public static string Weight(decimal value) => Math.Round(value, 4).ToString("0.0000", CultureInfo.InvariantCulture);

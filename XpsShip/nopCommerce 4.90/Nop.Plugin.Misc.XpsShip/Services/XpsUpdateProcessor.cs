@@ -60,7 +60,7 @@ public class XpsUpdateProcessor
     /// <param name="log">The log row already written for this post; the order and outcome are filled in on it</param>
     public async Task<UpdateResult> ProcessAsync(UpdateRequest request, XpsShipWebhookLog log)
     {
-        if (!Guid.TryParse(request.OrderId, out var orderGuid))
+        if (!XpsFormat.TryParseOrderId(request.OrderId, out var orderGuid))
             return new UpdateResult(404, $"order '{request.OrderId}' not found");
 
         var order = await _orderService.GetOrderByGuidAsync(orderGuid);

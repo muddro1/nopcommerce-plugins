@@ -69,6 +69,24 @@ public class MappingTests
     }
 
     [Test]
+    public void A_voided_order_goes_out_under_a_new_id_that_still_finds_the_order()
+    {
+        var guid = Guid.Parse("930b7cac-84aa-4cb9-8823-b98695c39f07");
+
+        XpsFormat.OrderId(guid, 0).Should().Be("930b7cac-84aa-4cb9-8823-b98695c39f07");
+        XpsFormat.OrderId(guid, 2).Should().Be("930b7cac-84aa-4cb9-8823-b98695c39f07-r2");
+
+        foreach (var id in new[] { "930b7cac-84aa-4cb9-8823-b98695c39f07", "930b7cac-84aa-4cb9-8823-b98695c39f07-r1", " 930B7CAC-84AA-4CB9-8823-B98695C39F07-R12 " })
+        {
+            XpsFormat.TryParseOrderId(id, out var parsed).Should().BeTrue(id);
+            parsed.Should().Be(guid);
+        }
+
+        XpsFormat.TryParseOrderId("6540", out _).Should().BeFalse();
+        XpsFormat.TryParseOrderId(null, out _).Should().BeFalse();
+    }
+
+    [Test]
     public void Decimals_go_out_as_invariant_strings()
     {
         XpsFormat.Money(8.2m).Should().Be("8.20");

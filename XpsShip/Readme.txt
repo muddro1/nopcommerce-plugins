@@ -1,6 +1,7 @@
 XPS Ship webhooks
 =================
-For nopCommerce 4.90 (version 2.00). A 4.50 build is planned but not yet made.
+For nopCommerce 4.90 (version 2.01) and 4.50 (version 1.01). The two builds
+behave the same; the differences are listed under the admin page below.
 
 Lets XPS Ship (eCommerce Webship) pull ready-to-ship orders from the store
 and post each label back. Every label becomes a real nopCommerce shipment
@@ -45,6 +46,9 @@ The page is under Sales > XPS Ship and FMS Plugins > XPS Ship, and on the
 plugin's Configure button. Viewing needs "Orders. View"; saving, holding,
 releasing, voiding and regenerating the key need "Orders. Create, edit,
 delete". Vendors never see it.
+
+On 4.50 the page is only under Sales > XPS Ship (4.50 has no FMS Plugins
+menu), and both viewing and editing need "Manage orders".
 
 
 Connecting XPS
@@ -97,7 +101,17 @@ An order is listed only when all of these hold:
 Lines with stock at or below 0 on orders that are sent get the title prefix
 "BACKORDERED: ", so staff can set them to 0 when shipping a partial.
 
+4.50 only: each line title starts with its pick bins, e.g.
+"[BIN A3-2; Holster mount: B7] ProLaser 4 Lidar Holster | ...". The first bin
+is the attribute combination's AttBinLocation, else the product's
+BinLocation; then the BinLocation of each "Associated to product" value's
+linked product, named after the value. These are the live store's custom
+columns; the 4.90 build has no bins.
+
 The list is oldest first and capped at "Most orders per list" (250).
+"Only orders placed on or after" leaves out every older order, even one that
+is still open. Set it before enabling so years of orders never marked shipped
+stay out of XPS; they are not listed in the Preview either.
 
 
 What is sent
@@ -168,6 +182,19 @@ Void on its row in the Labels tab. That:
   - marks the label Voided and adds a private order note
 
 The customer is not told. The replacement label sends a new shipped email.
+
+XPS never re-imports an order ID it has shipped, and its "Edit
+and Reship" makes a label that isn't linked to the order. So after a Void the
+order goes back to XPS under a new ID, the order GUID plus "-r1" ("-r2" after a
+second void). It shows in XPS as a new pending order with the same order
+number; ship it from there, not with Edit and Reship. Labels posted under
+either ID find the order.
+
+Void also deletes the label's shipped email if it is still waiting
+in the queue (Message templates > Shipment sent > send delay). It finds the
+email by the tracking number in its body, so the template must include
+%Shipment.TrackingNumber% or %Shipment.XpsTrackingUrl%. The order note says
+how many were deleted. An email already sent can't be taken back.
 Re-posting a voided tracking number is treated as a duplicate.
 
 

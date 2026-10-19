@@ -1,0 +1,22 @@
+@model string
+@{
+    var tabs = new[]
+    {
+        ("Configure", "Settings"),
+        ("Preview", "Preview List Orders"),
+        ("Flags", "Hold & release"),
+        ("Labels", "Labels"),
+        ("Log", "Webhook log")
+    };
+}
+<ul class="nav nav-tabs mb-3">
+    @foreach (var (action, title) in tabs)
+    {
+        <li class="nav-item">
+            <a class="nav-link @(Model == action ? "active" : "")" asp-controller="XpsShip" asp-action="@action">@title</a>
+        </li>
+    }
+    <li class="nav-item">
+        <a class="nav-link @(Model == "Warnings" ? "active" : "")" asp-controller="XpsShip" asp-action="Log" asp-route-endpoint="@XpsShipDefaults.EndpointWarning">Warnings</a>
+    </li>
+</ul>

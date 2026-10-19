@@ -87,6 +87,7 @@ public class XpsOrderBuilder
         var result = new OrderListResult();
 
         var candidates = (await _orderService.SearchOrdersAsync(
+                createdFromUtc: _settings.OrdersPlacedFromUtc,
                 osIds: new List<int> { OrderRules.OrderPending, OrderRules.OrderProcessing },
                 ssIds: new List<int> { OrderRules.NotYetShipped, OrderRules.PartiallyShipped }))
             .OrderBy(o => o.CreatedOnUtc)
@@ -223,7 +224,8 @@ public class XpsOrderBuilder
 
         var xps = new XpsOrder
         {
-            OrderId = order.OrderGuid.ToString(),
+            OrderId = XpsFormat.OrderId(order.OrderGuid,
+                (await _dataService.GetMapsForOrderAsync(order.OrderGuid)).Count(m => m.Status == TrackingMapStatus.Voided)),
             OrderNumber = order.CustomOrderNumber,
             OrderDate = XpsFormat.UnixSeconds(order.CreatedOnUtc),
             CustomerNotes = Instructions.CustomerNotes(order.ShippingMethod, instructions),

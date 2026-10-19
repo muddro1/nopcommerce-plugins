@@ -68,7 +68,7 @@ public class XpsShipWebhookController : Controller
 
         try
         {
-            var order = Guid.TryParse(orderId, out var guid) ? await _orderService.GetOrderByGuidAsync(guid) : null;
+            var order = XpsFormat.TryParseOrderId(orderId, out var guid) ? await _orderService.GetOrderByGuidAsync(guid) : null;
             if (order == null || order.Deleted)
             {
                 await LogAsync(XpsShipDefaults.EndpointGetOrder, 404, guard.Ip, summary: $"order '{orderId}' not found");

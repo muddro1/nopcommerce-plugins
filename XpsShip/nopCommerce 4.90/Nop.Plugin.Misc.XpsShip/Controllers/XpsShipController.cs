@@ -5,6 +5,7 @@ using Nop.Plugin.Misc.XpsShip.Logic;
 using Nop.Plugin.Misc.XpsShip.Models;
 using Nop.Plugin.Misc.XpsShip.Services;
 using Nop.Services.Configuration;
+using Nop.Services.Helpers;
 using Nop.Services.Localization;
 using Nop.Services.Messages;
 using Nop.Services.Orders;
@@ -23,6 +24,7 @@ public class XpsShipController : BasePluginController
 {
     private const int PageSize = 50;
 
+    private readonly IDateTimeHelper _dateTimeHelper;
     private readonly ILocalizationService _localizationService;
     private readonly INotificationService _notificationService;
     private readonly IOrderService _orderService;
@@ -34,7 +36,8 @@ public class XpsShipController : BasePluginController
     private readonly XpsShipDataService _dataService;
     private readonly XpsVoidService _voidService;
 
-    public XpsShipController(ILocalizationService localizationService,
+    public XpsShipController(IDateTimeHelper dateTimeHelper,
+        ILocalizationService localizationService,
         INotificationService notificationService,
         IOrderService orderService,
         IPermissionService permissionService,
@@ -45,6 +48,7 @@ public class XpsShipController : BasePluginController
         XpsShipDataService dataService,
         XpsVoidService voidService)
     {
+        _dateTimeHelper = dateTimeHelper;
         _localizationService = localizationService;
         _notificationService = notificationService;
         _orderService = orderService;
@@ -97,6 +101,10 @@ public class XpsShipController : BasePluginController
         settings.ExchangeSkuSuffix = model.ExchangeSkuSuffix?.Trim() ?? string.Empty;
         settings.NotifyCustomerOnShip = model.NotifyCustomerOnShip;
         settings.LogRetentionDays = Math.Max(model.LogRetentionDays, 1);
+        // The date picker gives midnight in the admin's time zone
+        settings.OrdersPlacedFromUtc = model.OrdersPlacedFrom.HasValue
+            ? _dateTimeHelper.ConvertToUtcTime(model.OrdersPlacedFrom.Value.Date, await _dateTimeHelper.GetCurrentTimeZoneAsync())
+            : null;
         settings.MaxOrdersPerList = Math.Max(model.MaxOrdersPerList, 1);
         settings.ServiceKeyMap = (model.ServiceKeyMap ?? string.Empty).Replace("\r", string.Empty).Trim();
         settings.DefaultServiceKey = model.DefaultServiceKey?.Trim() ?? string.Empty;
@@ -145,6 +153,9 @@ public class XpsShipController : BasePluginController
             ExchangeSkuSuffix = settings.ExchangeSkuSuffix,
             NotifyCustomerOnShip = settings.NotifyCustomerOnShip,
             LogRetentionDays = settings.LogRetentionDays,
+            OrdersPlacedFrom = settings.OrdersPlacedFromUtc.HasValue
+                ? await _dateTimeHelper.ConvertToUserTimeAsync(settings.OrdersPlacedFromUtc.Value, DateTimeKind.Utc)
+                : null,
             MaxOrdersPerList = settings.MaxOrdersPerList,
             ServiceKeyMap = settings.ServiceKeyMap,
             DefaultServiceKey = settings.DefaultServiceKey,
@@ -300,7 +311,7 @@ public class XpsShipController : BasePluginController
 
         var error = await _voidService.VoidAsync(id, await CurrentUserAsync());
         if (error == null)
-            _notificationService.SuccessNotification("Label voided: its shipment is deleted and the items are back in List Orders.");
+            _notificationService.SuccessNotification("Shipment deleted and the items are back in List Orders. The label is NOT voided in XPS: void it there if you haven't.");
         else
             _notificationService.ErrorNotification(error);
 
