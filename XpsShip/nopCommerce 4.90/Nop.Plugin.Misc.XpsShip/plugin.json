@@ -1,0 +1,11 @@
+{
+  "Group": "Misc",
+  "FriendlyName": "XPS Ship webhooks",
+  "SystemName": "Misc.XpsShip",
+  "Version": "2.01",
+  "SupportedVersions": [ "4.90" ],
+  "Author": "muddro1",
+  "DisplayOrder": 1,
+  "FileName": "Nop.Plugin.Misc.XpsShip.dll",
+  "Description": "Lets XPS Ship (eCommerce Webship) pull ready-to-ship orders and post labels back. Each label becomes a nopCommerce shipment with its tracking number, marked shipped."
+}
