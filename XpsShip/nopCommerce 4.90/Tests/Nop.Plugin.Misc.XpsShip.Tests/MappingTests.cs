@@ -137,4 +137,24 @@ public class MappingTests
         XpsFormat.KeysMatch("abc", "").Should().BeFalse();
         XpsFormat.NewSecretKey().Should().HaveLength(32);
     }
+
+    [Test]
+    public void A_customer_role_key_wins_and_the_first_matching_line_wins()
+    {
+        const string map = "Ship UPS 2-Day = EXP-UPS-2DAY\nAgency = EXP-UPS-NEXTDAY\nbroken line";
+
+        ServiceKeys.ResolveByRole(new[] { "Registered", "agency", "ship ups 2-day" }, map).Should().Be("EXP-UPS-2DAY");
+        ServiceKeys.ResolveByRole(new[] { "Registered", null, " Agency " }, map).Should().Be("EXP-UPS-NEXTDAY");
+        ServiceKeys.ResolveByRole(new[] { "Registered" }, map).Should().BeNull();
+        ServiceKeys.ResolveByRole(new[] { "Agency" }, "").Should().BeNull();
+    }
+
+    [Test]
+    public void Ship_to_address_is_one_part_per_line_with_city_state_zip_together()
+    {
+        ShipTo.Format("Al Borland", " ", "1880 FooBar Dr", "", "La Cucaracha", "CA", "91711", "US")
+            .Should().Be("Al Borland\n1880 FooBar Dr\nLa Cucaracha, CA 91711\nUS");
+        ShipTo.Format(null, null, null, null, null, null, "91711", null).Should().Be("91711");
+        ShipTo.Format(null, null, null, null, null, null, null, null).Should().BeNull();
+    }
 }

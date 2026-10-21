@@ -129,4 +129,25 @@ public class OrderRulesTests
         // T18 and the gap in nopCommerce's own Delete shipment
         OrderRules.ShippingStatusAfterVoid(current, otherShipped).Should().Be(expected);
     }
+
+    [TestCase(OrderRules.OrderProcessing, OrderRules.Shipped, true)]
+    [TestCase(OrderRules.OrderPending, OrderRules.Shipped, true)]
+    [TestCase(OrderRules.OrderProcessing, OrderRules.PartiallyShipped, false)]
+    [TestCase(OrderRules.OrderComplete, OrderRules.Shipped, false)]
+    [TestCase(40, OrderRules.Shipped, false)] // Cancelled
+    public void Only_open_fully_shipped_orders_are_completed(int orderStatus, int shippingStatus, bool expected) =>
+        OrderRules.CompleteAfterShip(orderStatus, shippingStatus).Should().Be(expected);
+
+    [Test]
+    public void Completed_email_ids_come_from_nopCommerces_note_wording()
+    {
+        OrderRules.CompletedEmailIds(new[]
+        {
+            "\"Order completed\" email (to customer) has been queued. Queued email identifiers: 41, 43.",
+            "\"Order completed\" email (to store owner) has been queued. Queued email identifiers: 42.",
+            "\"Shipped\" email (to customer) has been queued. Queued email identifiers: 40.",
+            null,
+            "XPS Ship: fully shipped, order status set to Complete"
+        }).Should().Equal(41, 43, 42);
+    }
 }

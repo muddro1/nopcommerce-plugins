@@ -2,6 +2,7 @@ using FluentAssertions;
 using Moq;
 using Nop.Core.Domain.Catalog;
 using Nop.Core.Domain.Directory;
+using Nop.Core.Domain.Localization;
 using Nop.Core.Domain.Orders;
 using Nop.Core.Domain.Shipping;
 using Nop.Core.Events;
@@ -13,8 +14,10 @@ using Nop.Services.Catalog;
 using Nop.Services.Common;
 using Nop.Services.Customers;
 using Nop.Services.Directory;
+using Nop.Services.Localization;
 using Nop.Services.Logging;
 using Nop.Services.Media;
+using Nop.Services.Messages;
 using Nop.Services.Orders;
 using Nop.Services.Shipping;
 using NUnit.Framework;
@@ -33,6 +36,8 @@ public class UpdateProcessorTests
     private List<Shipment> _shipments;
     private List<ShipmentItem> _shipmentItems;
     private Mock<IOrderProcessingService> _processing;
+    private Mock<IWorkflowMessageService> _workflow;
+    private Mock<IEventPublisher> _events;
     private int _shipFailuresLeft;
     private bool _mapExistedAtShip;
     private XpsUpdateProcessor _processor;
@@ -51,6 +56,7 @@ public class UpdateProcessorTests
 
         var orders = new Mock<IOrderService>();
         orders.Setup(o => o.GetOrderByGuidAsync(_order.OrderGuid)).ReturnsAsync(_order);
+        orders.Setup(o => o.GetOrderByIdAsync(7)).ReturnsAsync(_order);
         orders.Setup(o => o.GetOrderItemsAsync(7, It.IsAny<bool?>(), true, It.IsAny<int>())).ReturnsAsync(new List<OrderItem> { _item });
         orders.Setup(o => o.GetTotalNumberOfItemsCanBeAddedToShipmentAsync(_item)).ReturnsAsync(() => 2 - _shipmentItems.Sum(i => i.Quantity));
         orders.Setup(o => o.InsertOrderNoteAsync(It.IsAny<OrderNote>())).Callback((OrderNote n) => _notes.Add(n)).Returns(Task.CompletedTask);
@@ -100,10 +106,16 @@ public class UpdateProcessorTests
                     throw new InvalidOperationException("database timeout");
 
                 s.ShippedDateUtc = DateTime.UtcNow;
+                _order.ShippingStatusId = _shipmentItems.Sum(i => i.Quantity) >= 2 ? OrderRules.Shipped : OrderRules.PartiallyShipped;
                 return Task.CompletedTask;
             });
-        _processor = new XpsUpdateProcessor(Mock.Of<IEventPublisher>(), Mock.Of<ILogger>(), _processing.Object, orders.Object,
-            products.Object, shipments.Object, builder, dataService, settings);
+        _workflow = new Mock<IWorkflowMessageService>();
+        _workflow.Setup(w => w.SendOrderCompletedCustomerNotificationAsync(_order, It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(new List<int> { 41 });
+        _events = new Mock<IEventPublisher>();
+        _processor = new XpsUpdateProcessor(_events.Object, Mock.Of<ILocalizationService>(), Mock.Of<ILogger>(), _processing.Object, orders.Object,
+            products.Object, Mock.Of<IPdfService>(), shipments.Object, _workflow.Object,
+            new OrderSettings(), builder, dataService, settings);
     }
 
     private UpdateRequest Post(string trackingNumbers, params (string Id, int Quantity)[] items)
@@ -251,5 +263,44 @@ public class UpdateProcessorTests
         });
 
         (await _processor.ProcessAsync(request, new XpsShipWebhookLog())).HttpStatus.Should().Be(404);
+    }
+
+    [Test]
+    public async Task An_unpaid_order_shipped_in_full_is_completed_and_gets_the_completed_email_once()
+    {
+        // Open Payment PO: nopCommerce's own rule never completes it
+        _order.OrderStatusId = OrderRules.OrderProcessing;
+
+        await _processor.ProcessAsync(Post("1zc602x70219206948", (LineGuid.ToString(), 2)), new XpsShipWebhookLog());
+        await _processor.ProcessAsync(Post("1zc602x70219206948", (LineGuid.ToString(), 2)), new XpsShipWebhookLog());
+
+        _order.OrderStatusId.Should().Be(OrderRules.OrderComplete);
+        _workflow.Verify(w => w.SendOrderCompletedCustomerNotificationAsync(_order, It.IsAny<int>(), null, null), Times.Once);
+        _notes.Should().Contain(n => n.Note == "\"Order completed\" email (to customer) has been queued. Queued email identifiers: 41.");
+    }
+
+    [TestCase(OrderRules.OrderComplete, 2)] // paid: nopCommerce completed it and sent its own email
+    [TestCase(OrderRules.OrderProcessing, 1)] // partial shipment
+    public async Task No_completed_email_unless_the_plugin_completes_the_order(int orderStatus, int quantity)
+    {
+        _order.OrderStatusId = orderStatus;
+
+        await _processor.ProcessAsync(Post("1zc602x70219206948", (LineGuid.ToString(), quantity)), new XpsShipWebhookLog());
+
+        _order.OrderStatusId.Should().Be(orderStatus);
+        _workflow.Verify(w => w.SendOrderCompletedCustomerNotificationAsync(It.IsAny<Order>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Test]
+    public async Task A_failed_completed_email_still_answers_200()
+    {
+        _order.OrderStatusId = OrderRules.OrderProcessing;
+        _workflow.Setup(w => w.SendOrderCompletedCustomerNotificationAsync(_order, It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>()))
+            .ThrowsAsync(new InvalidOperationException("smtp down"));
+
+        var result = await _processor.ProcessAsync(Post("1zc602x70219206948", (LineGuid.ToString(), 2)), new XpsShipWebhookLog());
+
+        result.HttpStatus.Should().Be(200);
+        _order.OrderStatusId.Should().Be(OrderRules.OrderComplete);
     }
 }

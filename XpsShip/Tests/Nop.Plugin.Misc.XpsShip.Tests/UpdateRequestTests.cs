@@ -79,6 +79,17 @@ public class UpdateRequestTests
 
         XpsUpdateProcessor.AdminComment("UPS", request).Should().Be("XPS: UPS, 2 packages: 1Z1, 1Z2; label $14.82");
     }
+    [Test]
+    public void Keeps_the_receiver_xps_printed_on_the_label()
+    {
+        var request = UpdateRequest.Parse(Form(("orderId", "1"), ("carrier", "ups"), ("trackingNumbers", "A"),
+            ("receiver[company]", "Rocksolid Internet"), ("receiver[name]", "Al Borland"), ("receiver[address1]", "1880 FooBar Dr"),
+            ("receiver[address2]", ""), ("receiver[city]", "La Cucaracha"), ("receiver[state]", "California"),
+            ("receiver[zip]", "91711"), ("receiver[country]", "US")));
+
+        request.ShipToAddress.Should().Be("Al Borland\nRocksolid Internet\n1880 FooBar Dr\nLa Cucaracha, California 91711\nUS");
+        UpdateRequest.Parse(Form(("orderId", "1"), ("carrier", "ups"), ("trackingNumbers", "A"))).ShipToAddress.Should().BeNull();
+    }
 }
 
 public class ShipmentPlannerTests
@@ -182,4 +193,5 @@ public class FailedKeyLimiterTests
         limiter.RecordFailure("ip", now.AddMinutes(1));
         limiter.RecordFailure("ip", now.AddMinutes(20)).Should().BeFalse();
     }
+
 }

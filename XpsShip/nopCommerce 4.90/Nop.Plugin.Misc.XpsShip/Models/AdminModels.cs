@@ -12,6 +12,8 @@ public class ConfigurationModel
     [NopResourceDisplayName(P + "Enabled")] public bool Enabled { get; set; }
     [NopResourceDisplayName(P + "ShipBeforePaymentMethods")] public string? ShipBeforePaymentMethods { get; set; }
     [NopResourceDisplayName(P + "HideFullyBackorderedOrders")] public bool HideFullyBackorderedOrders { get; set; }
+    [NopResourceDisplayName(P + "MarkBackorderedLines")] public bool MarkBackorderedLines { get; set; }
+    [NopResourceDisplayName(P + "CompleteWhenFullyShipped")] public bool CompleteWhenFullyShipped { get; set; }
     [NopResourceDisplayName(P + "ExchangeSkuSuffix")] public string? ExchangeSkuSuffix { get; set; }
     [NopResourceDisplayName(P + "NotifyCustomerOnShip")] public bool NotifyCustomerOnShip { get; set; }
     [NopResourceDisplayName(P + "LogRetentionDays")] public int LogRetentionDays { get; set; }
@@ -19,6 +21,7 @@ public class ConfigurationModel
     [NopResourceDisplayName(P + "MaxOrdersPerList")] public int MaxOrdersPerList { get; set; }
     [NopResourceDisplayName(P + "ServiceKeyMap")] public string? ServiceKeyMap { get; set; }
     [NopResourceDisplayName(P + "DefaultServiceKey")] public string? DefaultServiceKey { get; set; }
+    [NopResourceDisplayName(P + "RoleServiceKeyMap")] public string? RoleServiceKeyMap { get; set; }
     [NopResourceDisplayName(P + "IpAllowlist")] public string? IpAllowlist { get; set; }
 
     [NopResourceDisplayName(P + "SenderName")] public string? SenderName { get; set; }

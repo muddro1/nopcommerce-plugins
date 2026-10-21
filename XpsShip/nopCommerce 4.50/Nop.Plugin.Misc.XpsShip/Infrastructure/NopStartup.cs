@@ -22,6 +22,7 @@ public class NopStartup : INopStartup
         services.AddScoped<XpsVoidService>();
         services.AddScoped<XpsRequestGuard>();
         services.AddScoped<TrackingLinkResolver>();
+        services.AddScoped<ShipToResolver>();
     }
 
     public void Configure(IApplicationBuilder application)
