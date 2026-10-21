@@ -42,6 +42,7 @@ public static class OrderRules
     // nopCommerce enum values (OrderStatus, ShippingStatus, PaymentStatus)
     public const int OrderPending = 10;
     public const int OrderProcessing = 20;
+    public const int OrderComplete = 30;
     public const int NotYetShipped = 20;
     public const int PartiallyShipped = 25;
     public const int Shipped = 30;
@@ -114,6 +115,26 @@ public static class OrderRules
 
         return stock <= 0 ? StockState.Backordered : StockState.InStock;
     }
+
+    /// <summary>Whether "Complete order when fully shipped" completes the order: open, and nothing left to ship</summary>
+    public static bool CompleteAfterShip(int orderStatusId, int shippingStatusId) =>
+        (orderStatusId == OrderPending || orderStatusId == OrderProcessing) && shippingStatusId == Shipped;
+
+    /// <summary>
+    /// The queued email ids in "Order completed" email (to customer) has been queued. Queued email identifiers: 41, 42.
+    /// notes: nopCommerce's own wording, which the plugin also uses, so Void finds completed emails whoever completed the order.
+    /// </summary>
+    public static IReadOnlyList<int> CompletedEmailIds(IEnumerable<string?> notes) =>
+        notes.Select(n => CompletedEmailNote.Match(n ?? string.Empty))
+            .Where(m => m.Success)
+            .SelectMany(m => m.Groups[1].Value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            .Select(id => int.TryParse(id, out var value) ? value : 0)
+            .Where(id => id > 0)
+            .Distinct()
+            .ToList();
+
+    private static readonly System.Text.RegularExpressions.Regex CompletedEmailNote =
+        new(@"^""Order completed"" email \(to [^)]+\) has been queued\. Queued email identifiers: ([\d,\s]+)\.$");
 
     /// <summary>
     /// The order's shipping status after a shipment is deleted. nopCommerce's own Delete shipment leaves it unchanged,

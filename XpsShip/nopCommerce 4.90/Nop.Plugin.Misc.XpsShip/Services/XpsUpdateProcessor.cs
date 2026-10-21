@@ -5,8 +5,12 @@ using Nop.Core.Domain.Shipping;
 using Nop.Core.Events;
 using Nop.Plugin.Misc.XpsShip.Domain;
 using Nop.Plugin.Misc.XpsShip.Logic;
+using Nop.Core.Domain.Localization;
 using Nop.Services.Catalog;
+using Nop.Services.Common;
+using Nop.Services.Localization;
 using Nop.Services.Logging;
+using Nop.Services.Messages;
 using Nop.Services.Orders;
 using Nop.Services.Shipping;
 
@@ -27,31 +31,46 @@ public class XpsUpdateProcessor
     private static readonly ConcurrentDictionary<Guid, SemaphoreSlim> OrderLocks = new();
 
     private readonly IEventPublisher _eventPublisher;
+    private readonly ILocalizationService _localizationService;
     private readonly ILogger _logger;
     private readonly IOrderProcessingService _orderProcessingService;
     private readonly IOrderService _orderService;
     private readonly IProductService _productService;
+    private readonly IPdfService _pdfService;
     private readonly IShipmentService _shipmentService;
+    private readonly IWorkflowMessageService _workflowMessageService;
+    private readonly LocalizationSettings _localizationSettings;
+    private readonly OrderSettings _orderSettings;
     private readonly XpsOrderBuilder _orderBuilder;
     private readonly XpsShipDataService _dataService;
     private readonly XpsShipSettings _settings;
 
     public XpsUpdateProcessor(IEventPublisher eventPublisher,
+        ILocalizationService localizationService,
         ILogger logger,
         IOrderProcessingService orderProcessingService,
         IOrderService orderService,
         IProductService productService,
+        IPdfService pdfService,
         IShipmentService shipmentService,
+        IWorkflowMessageService workflowMessageService,
+        LocalizationSettings localizationSettings,
+        OrderSettings orderSettings,
         XpsOrderBuilder orderBuilder,
         XpsShipDataService dataService,
         XpsShipSettings settings)
     {
         _eventPublisher = eventPublisher;
+        _localizationService = localizationService;
         _logger = logger;
         _orderProcessingService = orderProcessingService;
         _orderService = orderService;
         _productService = productService;
+        _pdfService = pdfService;
         _shipmentService = shipmentService;
+        _workflowMessageService = workflowMessageService;
+        _localizationSettings = localizationSettings;
+        _orderSettings = orderSettings;
         _orderBuilder = orderBuilder;
         _dataService = dataService;
         _settings = settings;
@@ -226,9 +245,69 @@ public class XpsUpdateProcessor
             await _logger.ErrorAsync($"XPS Ship: order {order.CustomOrderNumber}: shipment {shipment.Id} shipped, but its order notes could not be added", ex);
         }
 
+        if (_settings.CompleteWhenFullyShipped)
+        {
+            try
+            {
+                await CompleteIfFullyShippedAsync(order.Id);
+            }
+            catch (Exception ex)
+            {
+                await _logger.ErrorAsync($"XPS Ship: order {order.CustomOrderNumber}: shipment {shipment.Id} shipped, but the order could not be set to Complete", ex);
+            }
+        }
+
         var units = plan.Items.Sum(i => i.Quantity);
         return new UpdateResult(200, $"shipped: shipment {shipment.Id}, {plan.Items.Count} line(s), {units} unit(s), {carrierName} {primary}");
     }
+
+    /// <summary>
+    /// nopCommerce completes a fully shipped order only once it's paid, so agency POs stayed Processing. Its
+    /// SetOrderStatusAsync isn't public, so this does what it does on Complete: the status-changed event, then the
+    /// "Order completed" emails to the customer and store owner. Marking the order paid later sends nothing more,
+    /// since nopCommerce skips Complete orders. Reward points and gift card activation on Complete are not repeated.
+    /// </summary>
+    private async Task CompleteIfFullyShippedAsync(int orderId)
+    {
+        // Reloaded: ShipAsync updated its own copy of the order
+        var order = await _orderService.GetOrderByIdAsync(orderId);
+        if (order == null || !OrderRules.CompleteAfterShip(order.OrderStatusId, order.ShippingStatusId))
+            return;
+
+        var previousStatus = order.OrderStatus;
+        order.OrderStatusId = OrderRules.OrderComplete;
+        await _orderService.UpdateOrderAsync(order);
+
+        // As SetOrderStatusAsync: a handler may change the status back, and then nothing is sent
+        await _eventPublisher.PublishAsync(new OrderStatusChangedEvent(order, previousStatus));
+        if (order.OrderStatusId != OrderRules.OrderComplete)
+            return;
+
+        await AddNoteAsync(order.Id, "XPS Ship: fully shipped, order status set to Complete");
+
+        // Resolved from DI, so a plugin overriding these emails (CustomerProfile's contact copies) still applies
+        var attachmentPath = _orderSettings.AttachPdfInvoiceToOrderCompletedEmail ? await _pdfService.SaveOrderPdfToDiskAsync(order) : null;
+        var attachmentName = _orderSettings.AttachPdfInvoiceToOrderCompletedEmail
+            ? string.Format(await _localizationService.GetResourceAsync("PDFInvoice.FileName"), order.CustomOrderNumber) + ".pdf"
+            : null;
+        var emailIds = await _workflowMessageService.SendOrderCompletedCustomerNotificationAsync(order, order.CustomerLanguageId,
+            attachmentPath, attachmentName);
+        if (emailIds.Any())
+            await AddNoteAsync(order.Id, $"\"Order completed\" email (to customer) has been queued. Queued email identifiers: {string.Join(", ", emailIds)}.");
+
+        // nopCommerce doesn't note this one; the plugin does, so Void can find it while it's still queued
+        var ownerEmailIds = await _workflowMessageService.SendOrderCompletedStoreOwnerNotificationAsync(order, _localizationSettings.DefaultAdminLanguageId);
+        if (ownerEmailIds.Any())
+            await AddNoteAsync(order.Id, $"\"Order completed\" email (to store owner) has been queued. Queued email identifiers: {string.Join(", ", ownerEmailIds)}.");
+    }
+
+    private Task AddNoteAsync(int orderId, string note) => _orderService.InsertOrderNoteAsync(new OrderNote
+    {
+        OrderId = orderId,
+        Note = note,
+        DisplayToCustomer = false,
+        CreatedOnUtc = DateTime.UtcNow
+    });
 
     private static XpsShipTrackingMap NewMap(Order order, UpdateRequest request) => new()
     {
@@ -239,6 +318,7 @@ public class XpsUpdateProcessor
         TrackingNumbers = string.Join(",", request.TrackingNumbers),
         PackageCount = request.TrackingNumbers.Count,
         LabelCost = request.LabelCost,
+        ShipToAddress = request.ShipToAddress,
         BilledWeightLb = request.BilledWeightLb,
         Status = TrackingMapStatus.Active,
         CreatedOnUtc = DateTime.UtcNow

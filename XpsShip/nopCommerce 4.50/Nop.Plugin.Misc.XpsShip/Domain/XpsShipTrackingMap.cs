@@ -27,6 +27,9 @@ public class XpsShipTrackingMap : BaseEntity
     public DateTime? VoidedOnUtc { get; set; }
     public DateTime CreatedOnUtc { get; set; }
 
+    /// <summary>The address XPS printed on the label, one part per line; null on labels from before 1.02/2.02</summary>
+    public string? ShipToAddress { get; set; }
+
     public TrackingMapStatus Status
     {
         get => (TrackingMapStatus)StatusId;

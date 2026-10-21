@@ -1,4 +1,5 @@
 using Nop.Core.Domain.Catalog;
+using Nop.Core.Domain.Customers;
 using Nop.Core.Domain.Directory;
 using Nop.Core.Domain.Orders;
 using Nop.Plugin.Misc.XpsShip.Domain;
@@ -232,7 +233,7 @@ public class XpsOrderBuilder
             Currency = string.IsNullOrEmpty(order.CustomerCurrencyCode) ? null : order.CustomerCurrencyCode,
             Sender = Sender(),
             Receiver = await ReceiverAsync(order),
-            ShippingService = ServiceKeys.Resolve(order.ShippingMethod, ServiceKeys.Parse(_settings.ServiceKeyMap), _settings.DefaultServiceKey),
+            ShippingService = await ServiceKeyAsync(order),
             ShipperReference = Instructions.ShipperReference(order.CustomOrderNumber, Instructions.FindPo(instructions)),
             ShippingTotal = XpsFormat.Money(order.OrderShippingInclTax)
         };
@@ -250,7 +251,8 @@ public class XpsOrderBuilder
             {
                 ProductId = line.Item.OrderItemGuid.ToString(),
                 Sku = sku,
-                Title = Instructions.LineTitle(line.Product.Name, line.Item.AttributeDescription, line.Stock == StockState.Backordered),
+                Title = Instructions.LineTitle(line.Product.Name, line.Item.AttributeDescription,
+                    _settings.MarkBackorderedLines && line.Stock == StockState.Backordered),
                 Price = XpsFormat.Money(line.Item.UnitPriceExclTax),
                 Quantity = line.Remaining,
                 Weight = line.UnitWeightLb.HasValue ? XpsFormat.Weight(line.UnitWeightLb.Value) : null,
@@ -275,7 +277,23 @@ public class XpsOrderBuilder
         Email = _settings.SenderEmail
     };
 
-    private async Task<XpsAddress?> ReceiverAsync(Order order)
+    /// <summary>A key mapped to one of the customer's roles wins over the shipping method's</summary>
+    private async Task<string> ServiceKeyAsync(Order order)
+    {
+        if (!string.IsNullOrWhiteSpace(_settings.RoleServiceKeyMap))
+        {
+            var customer = await _customerService.GetCustomerByIdAsync(order.CustomerId);
+            var roles = customer == null ? null : await _customerService.GetCustomerRolesAsync(customer);
+            var key = ServiceKeys.ResolveByRole((roles ?? new List<CustomerRole>()).SelectMany(r => new[] { r.Name, r.SystemName }), _settings.RoleServiceKeyMap);
+            if (key != null)
+                return key;
+        }
+
+        return ServiceKeys.Resolve(order.ShippingMethod, ServiceKeys.Parse(_settings.ServiceKeyMap), _settings.DefaultServiceKey);
+    }
+
+    /// <summary>The order's shipping address as XPS gets it; also the fallback for %Shipment.XpsShipToAddress%</summary>
+    public async Task<XpsAddress?> ReceiverAsync(Order order)
     {
         if (!order.ShippingAddressId.HasValue)
             return null;

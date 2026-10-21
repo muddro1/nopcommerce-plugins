@@ -15,16 +15,22 @@ public class TrackingTokenConsumer : IConsumer<EntityTokensAddedEvent<Shipment>>
 {
     public const string TokenName = "Shipment.XpsTrackingUrl";
 
-    private readonly TrackingLinkResolver _resolver;
+    /// <summary>The address on the label, as HTML lines</summary>
+    public const string ShipToTokenName = "Shipment.XpsShipToAddress";
 
-    public TrackingTokenConsumer(TrackingLinkResolver resolver)
+    private readonly TrackingLinkResolver _resolver;
+    private readonly ShipToResolver _shipToResolver;
+
+    public TrackingTokenConsumer(TrackingLinkResolver resolver, ShipToResolver shipToResolver)
     {
         _resolver = resolver;
+        _shipToResolver = shipToResolver;
     }
 
     public async Task HandleEventAsync(EntityTokensAddedEvent<Shipment> eventMessage)
     {
         eventMessage.Tokens.Add(new Token(TokenName, await _resolver.ResolveAsync(eventMessage.Entity), true));
+        eventMessage.Tokens.Add(new Token(ShipToTokenName, await _shipToResolver.ResolveHtmlAsync(eventMessage.Entity), true));
     }
 }
 
@@ -33,7 +39,7 @@ public class TrackingTokenListConsumer : IConsumer<AdditionalTokensAddedEvent>
 {
     public Task HandleEventAsync(AdditionalTokensAddedEvent eventMessage)
     {
-        eventMessage.AddTokens($"%{TrackingTokenConsumer.TokenName}%");
+        eventMessage.AddTokens($"%{TrackingTokenConsumer.TokenName}%", $"%{TrackingTokenConsumer.ShipToTokenName}%");
         return Task.CompletedTask;
     }
 }

@@ -1,5 +1,6 @@
 using FluentMigrator;
 using Nop.Data.Migrations;
+using Nop.Plugin.Misc.XpsShip.Logic;
 
 namespace Nop.Plugin.Misc.XpsShip.Data;
 
@@ -27,7 +28,8 @@ public class SchemaMigration : Migration
                 .WithColumn("BilledWeightLb").AsDecimal(18, 4).Nullable()
                 .WithColumn("StatusId").AsInt32().NotNullable()
                 .WithColumn("VoidedOnUtc").AsDateTime2().Nullable()
-                .WithColumn("CreatedOnUtc").AsDateTime2().NotNullable();
+                .WithColumn("CreatedOnUtc").AsDateTime2().NotNullable()
+                .WithColumn("ShipToAddress").AsString(ShipTo.MaxLength).Nullable();
         }
 
         if (!Schema.Table(XpsShipDefaults.OrderFlagTable).Exists())

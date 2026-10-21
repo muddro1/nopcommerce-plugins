@@ -1,6 +1,6 @@
 XPS Ship webhooks
 =================
-For nopCommerce 4.90 (version 2.01) and 4.50 (version 1.01). The two builds
+For nopCommerce 4.90 (version 2.02) and 4.50 (version 1.02). The two builds
 behave the same; the differences are listed under the admin page below.
 
 Lets XPS Ship (eCommerce Webship) pull ready-to-ship orders from the store
@@ -99,14 +99,16 @@ An order is listed only when all of these hold:
      attributes use the matching attribute combination's stock.
 
 Lines with stock at or below 0 on orders that are sent get the title prefix
-"BACKORDERED: ", so staff can set them to 0 when shipping a partial.
+"BACKORDERED: ", so staff can set them to 0 when shipping a partial. Untick
+"Mark backordered lines" to leave the prefix off.
 
 4.50 only: each line title starts with its pick bins, e.g.
 "[BIN A3-2; Holster mount: B7] ProLaser 4 Lidar Holster | ...". The first bin
 is the attribute combination's AttBinLocation, else the product's
 BinLocation; then the BinLocation of each "Associated to product" value's
-linked product, named after the value. These are the live store's custom
-columns; the 4.90 build has no bins.
+linked product, named after the value. "Send item bin" and "Send component
+part bins" turn each half off (both on by default). These are the live
+store's custom columns; the 4.90 build has no bins.
 
 The list is oldest first and capped at "Most orders per list" (250).
 "Only orders placed on or after" leaves out every older order, even one that
@@ -121,7 +123,13 @@ What is sent
                     checkout attributes as plain text
   shipperReference  order number, plus "PO <n>" when the special
                     instruction has a PO number; cut to 35 characters
-  shippingService   service key from the Service keys map (else the default)
+  shippingService   service key from "Service keys by customer role" when
+                    the customer has one of those roles (first matching
+                    line wins), else from the Service keys map, else the
+                    default. To ship a customer one way every time, give
+                    them an extra role in admin (Customers > Customer
+                    roles) and map it, e.g. "Ship UPS 2-Day = EXP-UPS-2DAY".
+                    Role name or system name both match.
   shipping_total    shipping paid, incl. tax
   sender            the ship-from settings
   receiver          the shipping address; state as its abbreviation,
@@ -162,6 +170,16 @@ When a label posts
   - With more than one package, a note visible to the customer lists every
     number, without a "new order note" email.
   - Two posts for one order are handled one at a time.
+  - "Complete order when fully shipped" (on by default): once a label leaves
+    nothing to ship, the order is set to Complete with a private note, even
+    when it isn't paid (agency POs). nopCommerce's own rule only completes
+    paid orders. Payment status is untouched. nopCommerce's "Order
+    completed" email goes to the customer (4.90: and the store owner, and
+    OrderStatusChanged fires), with the PDF invoice when "Attach PDF invoice
+    to order completed email" is on, and its queued email ids go in an order
+    note. Marking the order paid later sends nothing more. A failed email is
+    logged; the label still posts. Reward points and gift card activation on
+    Complete don't run (no effect unless you use them).
 
 Every call is in the Webhook log tab (bodies up to 8 KB, kept
 "Keep log (days)", 90 by default). Failed calls are also written to
@@ -194,7 +212,11 @@ Void also deletes the label's shipped email if it is still waiting
 in the queue (Message templates > Shipment sent > send delay). It finds the
 email by the tracking number in its body, so the template must include
 %Shipment.TrackingNumber% or %Shipment.XpsTrackingUrl%. The order note says
-how many were deleted. An email already sent can't be taken back.
+how many were deleted. When the void takes a Complete order back to
+Processing, it also deletes the order's "Order completed" emails still in the
+queue (Order completed templates > send delay), found by the queued email ids
+in the order notes. That covers emails from the plugin and from nopCommerce's
+own completion of a paid order. An email already sent can't be taken back.
 Re-posting a voided tracking number is treated as a duplicate.
 
 
@@ -208,6 +230,21 @@ customer's order page. For the Tracking Number row of
 ShipmentSent.CustomerNotification:
 
   <td style="font-family: Arial,sans-serif; font-size: 13px; padding: 8px 0; border-bottom: 1px solid #f0f0f0;"><a style="color: #2e5fa3; font-weight: bold; text-decoration: none;" href="%Shipment.XpsTrackingUrl%">%Shipment.TrackingNumber%</a></td>
+
+
+Ship-to address token
+---------------------
+%Shipment.XpsShipToAddress% is the address XPS printed on the label (the
+receiver XPS posts with Update Order), so an address fixed in XPS shows as
+shipped, not as ordered. One part per line (name, company, street, "City, ST
+Zip", country). Shipments made by hand, and labels posted before 1.02/2.02,
+show the order's shipping address instead. Add it to
+ShipmentSent.CustomerNotification, e.g.:
+
+  <td style="font-family: Arial,sans-serif; font-size: 13px; padding: 8px 0;">%Shipment.XpsShipToAddress%</td>
+
+With the tracking link and the address in nopCommerce's shipped email, turn
+off XPS's own ship notification emails so customers get one email, not two.
 
 
 Security
@@ -232,9 +269,9 @@ Known limitations
   - No delivery dates: XPS webhooks don't send delivery events.
   - nopCommerce holds one tracking number per shipment. Extra package
     numbers are in the admin comment, the customer note and the Labels tab.
-  - Whether a fully shipped, paid order becomes Complete is nopCommerce's
-    order status rule (and "Complete order when delivered"); the plugin
-    doesn't set order status except when a void undoes a Complete.
+  - With "Complete order when fully shipped" off, whether a fully shipped
+    order becomes Complete is nopCommerce's rule (paid, and "Complete order
+    when delivered" off). Either way, a void undoes a Complete.
   - Open questions for XPS support: what Webship does with a non-200 reply
     (shown to staff? retried?), and its outbound IP addresses.
 

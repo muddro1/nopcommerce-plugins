@@ -65,14 +65,20 @@ public class XpsVoidService
         map.VoidedOnUtc = DateTime.UtcNow;
         await _dataService.UpdateMapAsync(map);
 
+        var wasComplete = order.OrderStatusId == OrderRules.OrderComplete;
         await RestoreShippingStatusAsync(order);
         var emailsDeleted = await DeleteUnsentShippedEmailsAsync(map);
+        // Only when this void reopened the order: a Complete order that stays Complete keeps its email
+        var completedEmailsDeleted = wasComplete && order.OrderStatusId != OrderRules.OrderComplete
+            ? await DeleteUnsentCompletedEmailsAsync(order.Id)
+            : 0;
 
         await _orderService.InsertOrderNoteAsync(new OrderNote
         {
             OrderId = order.Id,
             Note = $"XPS label {map.PrimaryTrackingNumber} voided by {voidedBy}" + (shipment == null ? " (its shipment was already deleted)" : "")
-                + (emailsDeleted > 0 ? $". Deleted {emailsDeleted} unsent shipped email(s)." : ""),
+                + (emailsDeleted > 0 ? $". Deleted {emailsDeleted} unsent shipped email(s)." : "")
+                + (completedEmailsDeleted > 0 ? $". Deleted {completedEmailsDeleted} unsent order completed email(s)." : ""),
             DisplayToCustomer = false,
             CreatedOnUtc = DateTime.UtcNow
         });
@@ -104,6 +110,23 @@ public class XpsVoidService
             .Where(e => e.SentOnUtc == null && e.CreatedOnUtc >= postedFromUtc && e.Body.Contains(tracking))
             .ToListAsync();
 
+        foreach (var email in emails)
+            await _queuedEmailRepository.DeleteAsync(email, false);
+
+        return emails.Count;
+    }
+
+    /// <summary>
+    /// Deletes the order's "Order completed" emails still waiting in the queue (the template's send delay), found by
+    /// the queued email ids in the order notes. An email already sent stays sent.
+    /// </summary>
+    private async Task<int> DeleteUnsentCompletedEmailsAsync(int orderId)
+    {
+        var ids = OrderRules.CompletedEmailIds((await _orderService.GetOrderNotesByOrderIdAsync(orderId)).Select(n => n.Note));
+        if (ids.Count == 0)
+            return 0;
+
+        var emails = await _queuedEmailRepository.Table.Where(e => e.SentOnUtc == null && ids.Contains(e.Id)).ToListAsync();
         foreach (var email in emails)
             await _queuedEmailRepository.DeleteAsync(email, false);
 

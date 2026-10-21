@@ -22,6 +22,9 @@ public class UpdateRequest
 
     public string? QuotedWeightUnit { get; init; }
 
+    /// <summary>The receiver XPS printed on the label, formatted by <see cref="ShipTo.Format"/>; null when not posted</summary>
+    public string? ShipToAddress { get; init; }
+
     /// <summary>Problems that make the post unusable (422)</summary>
     public IReadOnlyList<string> Errors { get; init; } = Array.Empty<string>();
 
@@ -93,6 +96,8 @@ public class UpdateRequest
             parsedItems.Add(new UpdateItem(item.Id.Trim(), quantity));
         }
 
+        string? Receiver(string field) => Get($"receiver[{field}]", $"receiver.{field}");
+
         return new UpdateRequest
         {
             OrderId = orderId,
@@ -103,6 +108,8 @@ public class UpdateRequest
             LabelCost = XpsFormat.ParseDecimal(fields.FirstOrDefault(f => ChargesTotal.IsMatch(f.Key)).Value),
             QuotedWeight = XpsFormat.ParseDecimal(Get("quote[details][quotedWeight]", "quote.details.quotedWeight")),
             QuotedWeightUnit = Get("quote[details][quotedWeightUnit]", "quote.details.quotedWeightUnit"),
+            ShipToAddress = ShipTo.Format(Receiver("name"), Receiver("company"), Receiver("address1"), Receiver("address2"),
+                Receiver("city"), Receiver("state"), Receiver("zip"), Receiver("country")),
             Errors = errors
         };
     }

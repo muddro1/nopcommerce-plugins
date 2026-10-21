@@ -15,6 +15,21 @@ public class XpsShipSettings : ISettings
 
     public bool HideFullyBackorderedOrders { get; set; } = true;
 
+    /// <summary>Puts "BACKORDERED: " in front of lines with stock at or below 0</summary>
+    public bool MarkBackorderedLines { get; set; } = true;
+
+    /// <summary>The line's own bin (attribute combination's, else the product's) in the item title</summary>
+    public bool SendItemBins { get; set; } = true;
+
+    /// <summary>The bin of each "Associated to product" component part in the item title</summary>
+    public bool SendComponentBins { get; set; } = true;
+
+    /// <summary>
+    /// Set the order to Complete once a label leaves nothing to ship, even when unpaid (agency POs).
+    /// nopCommerce's own rule only completes paid orders. Sends the "Order completed" emails. Void puts it back to Processing.
+    /// </summary>
+    public bool CompleteWhenFullyShipped { get; set; } = true;
+
     /// <summary>Orders with a line whose SKU ends in this are held until released on the admin page</summary>
     public string ExchangeSkuSuffix { get; set; } = "-EXCH";
 
@@ -36,6 +51,12 @@ public class XpsShipSettings : ISettings
     public string ServiceKeyMap { get; set; } = DefaultServiceKeyMap;
 
     public string DefaultServiceKey { get; set; } = "FREE";
+
+    /// <summary>
+    /// One "customer role = service key" pair per line. When the customer has one of the roles, its key wins over
+    /// the shipping method's; the first matching line wins.
+    /// </summary>
+    public string RoleServiceKeyMap { get; set; } = string.Empty;
 
     /// <summary>Comma-separated IPs allowed to call the webhooks. Empty allows any.</summary>
     public string IpAllowlist { get; set; } = string.Empty;

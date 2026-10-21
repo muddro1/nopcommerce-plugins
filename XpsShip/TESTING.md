@@ -1,9 +1,9 @@
 # XPS Ship plugin: staging test script
 
-**Plugin:** Misc.XpsShip 2.01 (nopCommerce 4.90) and 1.01 (nopCommerce 4.50)
+**Plugin:** Misc.XpsShip 2.02 (nopCommerce 4.90) and 1.02 (nopCommerce 4.50)
 **Purpose:** confirm on a copy of the live store, with the real XPS account, what the automated tests and a local run could only confirm against sample data.
 
-The automated tests (103 on 4.90, 105 on 4.50, which adds bins) cover the selection rules, mapping, tracking-number parsing and links, the Update Order parser and planner, the request guard, and the Update Order flow against mocked nopCommerce services. That flow includes undoing a failed post and recovering on the retry. The 4.50 build has not been run on a live site; on 4.50 only **Sales → XPS Ship** exists. The 4.90 plugin was also run end to end on a local nopCommerce 4.90 with sample data. That run covered:
+The automated tests (117 on 4.90, 119 on 4.50, which adds bins) cover the selection rules, mapping, tracking-number parsing and links, the Update Order parser and planner, the request guard, and the Update Order flow against mocked nopCommerce services. That flow includes undoing a failed post and recovering on the retry. The 4.50 build has not been run on a live site; on 4.50 only **Sales → XPS Ship** exists. The 4.90 plugin was also run end to end on a local nopCommerce 4.90 with sample data. That run covered:
 - install;
 - List Orders, Get Order and Update Order over HTTPS;
 - duplicate and unknown-line posts;
@@ -55,7 +55,10 @@ For each case, open **Preview List Orders** and check where the order lands.
 | T7 | Special instruction contains "do not ship" (#8090 shape) | Left out; **Hold & release** shows a Hold by "auto". Take off hold, then it is sent and stays sent on the next Preview. |
 | T8 | A line with no SKU (#8086 shape) | Sent with `"sku": null`; **Warnings** tab lists "No SKU: …" once. |
 | T14 | PayPal / card order left Pending | Left out, "unpaid (…)". |
+| – | Give T1's customer an extra role "Ship UPS 2-Day" and add `Ship UPS 2-Day = EXP-UPS-2DAY` under *Service keys by customer role* | `shippingService` `EXP-UPS-2DAY` though they chose FedEx Standard Overnight; `customerNotes` still says what they chose. Remove the role: back to `EXP-UPS-NEXTDAY`. |
 | – | Pickup in store, or a virtual gift card only | Left out. |
+| – | T3's order with *Mark backordered lines* unticked | Same lines, no `BACKORDERED: ` prefix. Tick it again. |
+| – | 4.50: T6's order with *Send item bin*, then *Send component part bins*, unticked | The title loses its own bin, then the mount's; with both off, no `[BIN …]`. Tick both again. |
 
 - [ ] The Preview list matches the "Waiting to ship" section of that day's daily report, apart from the deliberate exclusions above.
 
@@ -84,7 +87,10 @@ curl -s -H "x-rsis-key: $KEY" $SITE/xps/update \
 | – | `carrier=ontrac`; a 120-character tracking number | 422 for each. |
 | – | `carrier=dhl`, `trackingNumbers=JD014600006281230704` (with the Part 5 template active) | The queued shipped email links to DHL's tracking page, not the order page. |
 
-- [ ] After T1, check which **order** status a paid, fully shipped order ends in (Processing or Complete). It depends on the store's order settings.
+| – | Ship the rest of T3's Open Payment order, with *Complete order when fully shipped* ticked | Shipping status Shipped, order status **Complete**, payment status still Pending, private note "XPS Ship: fully shipped, order status set to Complete". The message queue has **one** "Order completed" email to the customer (4.90: and one to the store owner), and a note lists its id. Then mark the order paid: no second completed email. |
+| – | With a send delay on the OrderCompleted templates, Void that order's label before the emails go | Order back to Processing; the unsent "Order completed" emails are gone from the message queue; the void note says "Deleted 2 unsent order completed email(s)" (1 on 4.50). |
+| – | Ship a paid order in full | nopCommerce completes it itself; exactly one "Order completed" email, none from the plugin. |
+| – | The same on another unpaid order with the setting unticked | Order status stays Processing (nopCommerce only completes paid orders). |
 
 ## Part 4: Live XPS against staging
 
@@ -99,16 +105,18 @@ curl -s -H "x-rsis-key: $KEY" $SITE/xps/update \
    - [ ] The Labels tab shows the label cost and billed weight.
 5. Ask XPS support, or watch the log: what does Webship show when a post gets 422?
 6. Void the labels in XPS, then click **Void** on each in the Labels tab (T18).
-   - [ ] The shipment is gone, the label is Voided, there's a private note "XPS label … voided", the shipping status is back to Not yet shipped / Partially shipped, and the order is back in List Orders.
+   - [ ] The shipment is gone, the label is Voided, there's a private note "XPS label … voided", the shipping status is back to Not yet shipped / Partially shipped, a Complete order is back to Processing, and the order is back in List Orders.
    - [ ] A new label for the same order then posts normally.
 
 ## Part 5: Emails and tracking links (T16, T21)
 
 1. Activate **ShipmentSent.CustomerNotification**. Replace the second cell of its Tracking Number row with the snippet in `Readme.txt`.
-2. Post a UPS label and a USPS label.
+2. Add `%Shipment.XpsShipToAddress%` to the same template (snippet in `Readme.txt`).
+3. Post a UPS label and a USPS label.
    - [ ] In the message queue, the links go to the UPS and USPS tracking pages for those numbers.
-3. For old hand-made shipments ("UPS 1ZC602X71321659005", "USPS 9334611045000004779320", "FEDEX 876435110017", "Hand Deliver"), use the template's *Test template* button with the order.
-   - [ ] Carrier links with the typed text stripped; "Hand Deliver" links to the customer's order page.
+   - [ ] Change the street in XPS before buying one of the labels: that email shows the XPS street, not the order's.
+4. For old hand-made shipments ("UPS 1ZC602X71321659005", "USPS 9334611045000004779320", "FEDEX 876435110017", "Hand Deliver"), use the template's *Test template* button with the order.
+   - [ ] Carrier links with the typed text stripped; "Hand Deliver" links to the customer's order page. The address is the order's shipping address.
 
 ## Part 6: Daily report (T17)
 

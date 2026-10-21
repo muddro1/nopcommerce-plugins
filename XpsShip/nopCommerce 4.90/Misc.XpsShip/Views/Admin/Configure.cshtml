@@ -66,6 +66,14 @@
                         <div class="col-md-9"><nop-editor asp-for="HideFullyBackorderedOrders" /><small class="form-text text-muted">@T(P + "HideFullyBackorderedOrders.Hint")</small></div>
                     </div>
                     <div class="form-group row">
+                        <div class="col-md-3"><nop-label asp-for="MarkBackorderedLines" /></div>
+                        <div class="col-md-9"><nop-editor asp-for="MarkBackorderedLines" /><small class="form-text text-muted">@T(P + "MarkBackorderedLines.Hint")</small></div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="col-md-3"><nop-label asp-for="CompleteWhenFullyShipped" /></div>
+                        <div class="col-md-9"><nop-editor asp-for="CompleteWhenFullyShipped" /><small class="form-text text-muted">@T(P + "CompleteWhenFullyShipped.Hint")</small></div>
+                    </div>
+                    <div class="form-group row">
                         <div class="col-md-3"><nop-label asp-for="ExchangeSkuSuffix" /></div>
                         <div class="col-md-9"><nop-editor asp-for="ExchangeSkuSuffix" /><small class="form-text text-muted">@T(P + "ExchangeSkuSuffix.Hint")</small></div>
                     </div>
@@ -80,6 +88,10 @@
                     <div class="form-group row">
                         <div class="col-md-3"><nop-label asp-for="DefaultServiceKey" /></div>
                         <div class="col-md-9"><nop-editor asp-for="DefaultServiceKey" /><small class="form-text text-muted">@T(P + "DefaultServiceKey.Hint")</small></div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="col-md-3"><nop-label asp-for="RoleServiceKeyMap" /></div>
+                        <div class="col-md-9"><nop-textarea asp-for="RoleServiceKeyMap" /><small class="form-text text-muted">@T(P + "RoleServiceKeyMap.Hint")</small></div>
                     </div>
                     <div class="form-group row">
                         <div class="col-md-3"><nop-label asp-for="OrdersPlacedFrom" /></div>

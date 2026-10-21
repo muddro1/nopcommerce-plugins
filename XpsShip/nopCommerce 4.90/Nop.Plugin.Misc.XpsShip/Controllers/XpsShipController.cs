@@ -98,6 +98,8 @@ public class XpsShipController : BasePluginController
         settings.Enabled = model.Enabled;
         settings.ShipBeforePaymentMethods = model.ShipBeforePaymentMethods?.Trim() ?? string.Empty;
         settings.HideFullyBackorderedOrders = model.HideFullyBackorderedOrders;
+        settings.MarkBackorderedLines = model.MarkBackorderedLines;
+        settings.CompleteWhenFullyShipped = model.CompleteWhenFullyShipped;
         settings.ExchangeSkuSuffix = model.ExchangeSkuSuffix?.Trim() ?? string.Empty;
         settings.NotifyCustomerOnShip = model.NotifyCustomerOnShip;
         settings.LogRetentionDays = Math.Max(model.LogRetentionDays, 1);
@@ -108,6 +110,7 @@ public class XpsShipController : BasePluginController
         settings.MaxOrdersPerList = Math.Max(model.MaxOrdersPerList, 1);
         settings.ServiceKeyMap = (model.ServiceKeyMap ?? string.Empty).Replace("\r", string.Empty).Trim();
         settings.DefaultServiceKey = model.DefaultServiceKey?.Trim() ?? string.Empty;
+        settings.RoleServiceKeyMap = (model.RoleServiceKeyMap ?? string.Empty).Replace("\r", string.Empty).Trim();
         settings.IpAllowlist = model.IpAllowlist?.Trim() ?? string.Empty;
         settings.SenderName = model.SenderName?.Trim() ?? string.Empty;
         settings.SenderCompany = model.SenderCompany?.Trim() ?? string.Empty;
@@ -150,6 +153,8 @@ public class XpsShipController : BasePluginController
             Enabled = settings.Enabled,
             ShipBeforePaymentMethods = settings.ShipBeforePaymentMethods,
             HideFullyBackorderedOrders = settings.HideFullyBackorderedOrders,
+            MarkBackorderedLines = settings.MarkBackorderedLines,
+            CompleteWhenFullyShipped = settings.CompleteWhenFullyShipped,
             ExchangeSkuSuffix = settings.ExchangeSkuSuffix,
             NotifyCustomerOnShip = settings.NotifyCustomerOnShip,
             LogRetentionDays = settings.LogRetentionDays,
@@ -159,6 +164,7 @@ public class XpsShipController : BasePluginController
             MaxOrdersPerList = settings.MaxOrdersPerList,
             ServiceKeyMap = settings.ServiceKeyMap,
             DefaultServiceKey = settings.DefaultServiceKey,
+            RoleServiceKeyMap = settings.RoleServiceKeyMap,
             IpAllowlist = settings.IpAllowlist,
             SenderName = settings.SenderName,
             SenderCompany = settings.SenderCompany,
