@@ -33,6 +33,19 @@ public class XpsOrder
     [JsonPropertyName("shipping_total")] public string? ShippingTotal { get; set; }
     [JsonPropertyName("weightUnit")] public string WeightUnit { get; set; } = "lb";
     [JsonPropertyName("items")] public IList<XpsItem> Items { get; set; } = new List<XpsItem>();
+
+    /// <summary>Only sent when a line ships separately; otherwise staff pick the boxes in XPS</summary>
+    [JsonPropertyName("packages"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IList<XpsPackage>? Packages { get; set; }
+}
+
+/// <summary>Weight in lb, sizes in inches</summary>
+public class XpsPackage
+{
+    [JsonPropertyName("weight")] public string? Weight { get; set; }
+    [JsonPropertyName("length")] public string? Length { get; set; }
+    [JsonPropertyName("width")] public string? Width { get; set; }
+    [JsonPropertyName("height")] public string? Height { get; set; }
 }
 
 public class XpsAddress

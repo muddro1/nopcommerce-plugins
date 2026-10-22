@@ -157,4 +157,36 @@ public class MappingTests
         ShipTo.Format(null, null, null, null, null, null, "91711", null).Should().Be("91711");
         ShipTo.Format(null, null, null, null, null, null, null, null).Should().BeNull();
     }
+
+    [Test]
+    public void No_packages_when_nothing_ships_separately()
+    {
+        Packages.For(new[] { new PackableLine(2, 1.5m, false, null) }).Should().BeNull();
+        // A ship-separately line already shipped doesn't count
+        Packages.For(new[] { new PackableLine(0, 9m, true, (10m, 8m, 6m)), new PackableLine(1, 1m, false, null) }).Should().BeNull();
+        XpsJson.Serialize(new XpsOrder()).Should().NotContain("packages");
+    }
+
+    [Test]
+    public void Each_separate_unit_is_a_box_and_the_rest_share_one_unsized_box()
+    {
+        var packages = Packages.For(new[]
+        {
+            new PackableLine(2, 12.5m, true, (24m, 18m, 6m)),
+            new PackableLine(3, 0.5m, false, null),
+            new PackableLine(1, 2m, false, null)
+        })!;
+
+        packages.Should().HaveCount(3);
+        packages[0].Should().BeEquivalentTo(new XpsPackage { Weight = "12.5000", Length = "24.0000", Width = "18.0000", Height = "6.0000" });
+        packages[1].Should().BeEquivalentTo(packages[0]);
+        packages[2].Should().BeEquivalentTo(new XpsPackage { Weight = "3.5000" });
+    }
+
+    [Test]
+    public void Only_separate_lines_means_no_extra_box()
+    {
+        Packages.For(new[] { new PackableLine(1, 4m, true, null) })!
+            .Should().ContainSingle().Which.Should().BeEquivalentTo(new XpsPackage { Weight = "4.0000" });
+    }
 }

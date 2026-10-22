@@ -1,6 +1,6 @@
 XPS Ship webhooks
 =================
-For nopCommerce 4.90 (version 2.02) and 4.50 (version 1.02). The two builds
+For nopCommerce 4.90 (version 2.03) and 4.50 (version 1.03). The two builds
 behave the same; the differences are listed under the admin page below.
 
 Lets XPS Ship (eCommerce Webship) pull ready-to-ship orders from the store
@@ -140,8 +140,17 @@ What is sent
                     quantity still to ship, unit weight in lb, 100px image
 
 A line with no SKU or no weight is still sent, and logged once per order on
-the Warnings tab so the catalog gets fixed. Packages are not sent: staff
-pick boxes and weights in XPS.
+the Warnings tab so the catalog gets fixed.
+
+Packages are sent only when a line's product is marked "Ship separately":
+each unit of it is its own package with the product's weight (lb) and
+length x width x height (in), and everything else goes in one more package
+with the summed weight and no size, so staff still pick that box. With no
+ship-separately line, no packages are sent and staff pick boxes in XPS. A
+ship-separately product with no size is logged on the Warnings tab.
+Known issue (October 2026): XPS keeps the sizes but shows the order's total
+item weight on every package; the weights the plugin sends are right (see
+Preview). Fix package weights by hand in XPS until XPS support answers.
 
 
 When a label posts

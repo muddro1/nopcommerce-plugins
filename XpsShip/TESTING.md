@@ -1,9 +1,9 @@
 # XPS Ship plugin: staging test script
 
-**Plugin:** Misc.XpsShip 2.02 (nopCommerce 4.90) and 1.02 (nopCommerce 4.50)
+**Plugin:** Misc.XpsShip 2.03 (nopCommerce 4.90) and 1.03 (nopCommerce 4.50)
 **Purpose:** confirm on a copy of the live store, with the real XPS account, what the automated tests and a local run could only confirm against sample data.
 
-The automated tests (117 on 4.90, 119 on 4.50, which adds bins) cover the selection rules, mapping, tracking-number parsing and links, the Update Order parser and planner, the request guard, and the Update Order flow against mocked nopCommerce services. That flow includes undoing a failed post and recovering on the retry. The 4.50 build has not been run on a live site; on 4.50 only **Sales → XPS Ship** exists. The 4.90 plugin was also run end to end on a local nopCommerce 4.90 with sample data. That run covered:
+The automated tests (120 on 4.90, 122 on 4.50, which adds bins) cover the selection rules, mapping, tracking-number parsing and links, the Update Order parser and planner, the request guard, and the Update Order flow against mocked nopCommerce services. That flow includes undoing a failed post and recovering on the retry. The 4.50 build has not been run on a live site; on 4.50 only **Sales → XPS Ship** exists. The 4.90 plugin was also run end to end on a local nopCommerce 4.90 with sample data. That run covered:
 - install;
 - List Orders, Get Order and Update Order over HTTPS;
 - duplicate and unknown-line posts;
