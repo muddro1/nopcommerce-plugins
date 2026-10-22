@@ -53,6 +53,8 @@ public class XpsOrderBuilder
     // Pounds conversion, looked up once per request: null = the base weight is already pounds
     private MeasureWeight? _pounds;
     private bool _poundsResolved;
+    private MeasureDimension? _inches;
+    private bool _inchesResolved;
 
     public XpsOrderBuilder(IAddressService addressService,
         ICountryService countryService,
@@ -262,6 +264,29 @@ public class XpsOrderBuilder
         return _pounds == null ? weight : await _measureService.ConvertFromPrimaryMeasureWeightAsync(weight, _pounds);
     }
 
+    /// <summary>The product's length, width, height in inches; null unless all three are set</summary>
+    private async Task<(decimal Length, decimal Width, decimal Height)?> DimensionsInAsync(Product product)
+    {
+        if (product.Length <= 0 || product.Width <= 0 || product.Height <= 0)
+            return null;
+
+        if (!_inchesResolved)
+        {
+            var baseDimension = await _measureService.GetMeasureDimensionByIdAsync(_measureSettings.BaseDimensionId);
+            _inches = string.Equals(baseDimension?.SystemKeyword, "inches", StringComparison.OrdinalIgnoreCase)
+                ? null
+                : await _measureService.GetMeasureDimensionBySystemKeywordAsync("inches");
+            _inchesResolved = true;
+        }
+
+        if (_inches == null)
+            return (product.Length, product.Width, product.Height);
+
+        return (await _measureService.ConvertFromPrimaryMeasureDimensionAsync(product.Length, _inches),
+            await _measureService.ConvertFromPrimaryMeasureDimensionAsync(product.Width, _inches),
+            await _measureService.ConvertFromPrimaryMeasureDimensionAsync(product.Height, _inches));
+    }
+
     private static string InstructionsOf(Order order) => Instructions.ToPlainText(order.CheckoutAttributeDescription, "\n");
 
     private async Task<XpsOrder> MapAsync(Order order, IList<OrderLine> lines)
@@ -305,6 +330,17 @@ public class XpsOrderBuilder
                 ImgUrl = await ImageUrlAsync(line)
             });
         }
+
+        var packable = new List<PackableLine>();
+        foreach (var line in lines)
+        {
+            var dimensions = line.Product.ShipSeparately ? await DimensionsInAsync(line.Product) : null;
+            if (line.Product.ShipSeparately && line.Remaining > 0 && dimensions == null)
+                await _dataService.AddWarningOnceAsync(order.OrderGuid, order.CustomOrderNumber, $"Ships separately, no size: {line.Sku ?? line.Product.Name}");
+
+            packable.Add(new PackableLine(line.Remaining, line.UnitWeightLb, line.Product.ShipSeparately, dimensions));
+        }
+        xps.Packages = Packages.For(packable);
 
         return xps;
     }

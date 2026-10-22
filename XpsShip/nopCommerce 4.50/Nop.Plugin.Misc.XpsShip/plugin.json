@@ -2,7 +2,7 @@
   "Group": "Misc",
   "FriendlyName": "XPS Ship webhooks",
   "SystemName": "Misc.XpsShip",
-  "Version": "1.02",
+  "Version": "1.03",
   "SupportedVersions": [ "4.50" ],
   "Author": "muddro1",
   "DisplayOrder": 1,
